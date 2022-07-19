@@ -2,6 +2,9 @@
   "name": "companion-module-rgblink-mini",
   "version": "1.0.0",
   "description": "RGBlink mini",
+	"manufacturer": "RGBlink",
+	"product": "mini",
+  "shortname": "mini",  
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
