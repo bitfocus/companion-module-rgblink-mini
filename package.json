@@ -1,0 +1,11 @@
+{
+  "name": "companion-module-rgblink-mini",
+  "version": "1.0.0",
+  "description": "RGBlink mini",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Marcin, Krzysztof",
+  "license": "ISC"
+}
