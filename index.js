@@ -10,17 +10,17 @@ const udp = require('../../udp')
 const instance_skel = require('../../instance_skel')
 
 const swtichToSourceMsg = {
-	'0': '<T0000750200000077>',
-	'1': '<T0000750200010078>',
-	'2': '<T0000750200020079>',
-	'3': '<T000075020003007A>'
+	'1': '<T0000750200000077>',
+	'2': '<T0000750200010078>',
+	'3': '<T0000750200020079>',
+	'4': '<T000075020003007A>'
 };
 
 const swtichToSourceFeedbackMsg = {
-	'<F0000750200000077>': 0,
-	'<F0000750200010078>': 1,
-	'<F0000750200020079>': 2,
-	'<F000075020003007A>': 3
+	'<F0000750200000077>': 1,
+	'<F0000750200010078>': 2,
+	'<F0000750200020079>': 3,
+	'<F000075020003007A>': 4
 };
 
 class instance extends instance_skel {
@@ -32,7 +32,8 @@ class instance extends instance_skel {
 	constructor(system, id, config) {
 		super(system, id, config)
 		console.log('RGBlink mini: constructor');
-		this.initActions()
+		this.initActions();
+		this.initPresets();
 	}
 
 	config_fields() {
@@ -82,13 +83,13 @@ class instance extends instance_skel {
 					type: 'dropdown',
 					label: 'Source number',
 					id: 'sourceNumber',
-					default: '0',
+					default: '1',
 					tooltip: 'Choose source number, which should be selected',
 					choices: [
-						{ id: '0', label: '1' },
-						{ id: '1', label: '2' },
-						{ id: '2', label: '3' },
-						{ id: '3', label: '4' }
+						{ id: '1', label: '1' },
+						{ id: '2', label: '2' },
+						{ id: '3', label: '3' },
+						{ id: '4', label: '4' }
 					],
 					minChoicesForSearch: 0
 				},
@@ -163,6 +164,45 @@ class instance extends instance_skel {
 		}
 	}
 
+	initPresets(){
+		console.log('initPresets');
+		let presets = [];
+		presets.push({
+			category: 'Select source',
+			bank: {
+				style: 'text',
+				text: 'Source\\n1',
+				size: 'auto',
+				color: '16777215',
+				bgcolor: 0
+			},
+			actions: [
+				{
+					action: 'switch_to_source',
+					options: {
+						sourceNumber: '1',
+					}
+				}
+			],
+			feedbacks:[
+				{
+					type: 'set_source',
+					options: {
+						sourceNumber: '1',
+					},
+					style: {
+						// The default style change for a boolean feedback
+						// The user will be able to customise these values as well as the fields that will be changed
+						color: this.rgb(255, 255, 255),
+						bgcolor: this.rgb(0, 255, 0)
+					},
+				}
+			],
+		});		
+		this.setPresetDefinitions(presets);
+		console.log('after initPresets');
+	}
+
 	sendCommand(cmd) {
 		console.log('RGBlink mini: sendCommand');
 		//console.log(this.socket.connected);
@@ -222,13 +262,13 @@ class instance extends instance_skel {
 					type: 'dropdown',
 					label: 'Source number',
 					id: 'sourceNumber',
-					default: '0',
+					default: '1',
 					tooltip: 'Choose source number',
 					choices: [
-						{ id: '0', label: '1' },
-						{ id: '1', label: '2' },
-						{ id: '2', label: '3' },
-						{ id: '3', label: '4' }
+						{ id: '1', label: '1' },
+						{ id: '2', label: '2' },
+						{ id: '3', label: '3' },
+						{ id: '4', label: '4' }
 					],
 					minChoicesForSearch: 0
 				},
