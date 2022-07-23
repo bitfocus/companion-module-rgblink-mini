@@ -5,12 +5,21 @@ TODO
 * feedbacki
 * inne akcje (np pip)
 * przetestować feedbacki do pip
+* presets
 */
 
 const udp = require('../../udp')
 const instance_skel = require('../../instance_skel')
 
 class instance extends instance_skel {
+
+	swtichToSourceMsg = {
+		'0' : '<T0000750200000077>',
+		'1' : '<T0000750200010078>',
+		'2' : '<T0000750200020079>',
+		'3' : '<T000075020003007A>'
+	};
+
 	constructor(system, id, config) {
 		super(system, id, config)
 		console.log('RGBlink mini: constructor');
@@ -57,19 +66,27 @@ class instance extends instance_skel {
 		console.log('RGBlink mini: initActions');
 		let actions = {}
 
-		actions['sample_action'] = {
-			label: 'Sample Action',
+		actions['switch_to_source'] = {
+			label: 'Switch to signal source',
 			options: [
 				{
-					type: 'textinput',
-					label: 'Some Text',
-					id: 'text',
-					regex: this.REGEX_SOMETHING,
+					type: 'dropdown',
+					label: 'Source number',
+					id: 'sourceNumber',
+					default: '0',
+					tooltip: 'Choose source number, which should be selected',
+					choices: [
+					  { id: '0', label: '1' },
+					  { id: '1', label: '2' },
+					  { id: '2', label: '3' },
+					  { id: '3', label: '4' }
+					],
+					minChoicesForSearch: 0
 				},
 			],
 			callback: (action, bank) => {
-				let opt = action.options
-				this.sendCommand(`SET sample_action: ${opt.text}`)
+				console.log('onAction');
+				this.sendCommand(this.swtichToSourceMsg[action.options.sourceNumber]);
 			},
 		}
 
@@ -126,9 +143,9 @@ class instance extends instance_skel {
 				this.status(this.STATUS_OK)
 			})
 
-			this.sendCommand('<T0000750200010078>'); //Switch to signal source 2
-			this.sendCommand('<T0000750200020079>'); //Switch to signal source 3
-			this.sendCommand('<T000075020003007A>'); //Switch to signal source 4
+			//this.sendCommand('<T0000750200010078>'); //Switch to signal source 2
+			//this.sendCommand('<T0000750200020079>'); //Switch to signal source 3
+			//this.sendCommand('<T000075020003007A>'); //Switch to signal source 4
 
 		}
 	}
