@@ -1,8 +1,6 @@
 /*
 TODO
 * sprawdzanie połaczneia na początku - OK pokazuje się, nawet gdy urządzenie niepodłączone do prądu
-* konfitguracja akcji - select source
-* feedbacki
 * inne akcje (np pip)
 * przetestować feedbacki do pip
 * presets
@@ -11,14 +9,25 @@ TODO
 const udp = require('../../udp')
 const instance_skel = require('../../instance_skel')
 
+const swtichToSourceMsg = {
+	'0': '<T0000750200000077>',
+	'1': '<T0000750200010078>',
+	'2': '<T0000750200020079>',
+	'3': '<T000075020003007A>'
+};
+
+const swtichToSourceFeedbackMsg = {
+	'<F0000750200000077>': 0,
+	'<F0000750200010078>': 1,
+	'<F0000750200020079>': 2,
+	'<F000075020003007A>': 3
+};
+
 class instance extends instance_skel {
 
-	swtichToSourceMsg = {
-		'0' : '<T0000750200000077>',
-		'1' : '<T0000750200010078>',
-		'2' : '<T0000750200020079>',
-		'3' : '<T000075020003007A>'
-	};
+	deviceStatus = {
+		'selectedSource': undefined
+	}
 
 	constructor(system, id, config) {
 		super(system, id, config)
@@ -42,7 +51,7 @@ class instance extends instance_skel {
 				width: 12,
 				label: 'Port',
 				value: 'Will be used default port ' + this.config.port,
-			},			
+			},
 		]
 	}
 
@@ -76,17 +85,17 @@ class instance extends instance_skel {
 					default: '0',
 					tooltip: 'Choose source number, which should be selected',
 					choices: [
-					  { id: '0', label: '1' },
-					  { id: '1', label: '2' },
-					  { id: '2', label: '3' },
-					  { id: '3', label: '4' }
+						{ id: '0', label: '1' },
+						{ id: '1', label: '2' },
+						{ id: '2', label: '3' },
+						{ id: '3', label: '4' }
 					],
 					minChoicesForSearch: 0
 				},
 			],
 			callback: (action, bank) => {
 				console.log('onAction');
-				this.sendCommand(this.swtichToSourceMsg[action.options.sourceNumber]);
+				this.sendCommand(swtichToSourceMsg[action.options.sourceNumber]);
 			},
 		}
 
@@ -128,25 +137,29 @@ class instance extends instance_skel {
 				console.log(message);
 				console.log(metadata);
 
-				if(metadata.size !== 19){
+				if (metadata.size !== 19) {
 					this.status(this.STATUS_WARNING, 'Feedback length != 19')
 					return;
 				}
 
-				if(metadata.address != this.config.host || metadata.port != this.config.port ){
+				if (metadata.address != this.config.host || metadata.port != this.config.port) {
 					this.status(this.STATUS_WARNING, 'Feedback received from different sender ' + metadata.address + ":" + metadata.port)
 					return;
 				}
 
-				console.log(message.toString('utf8'))
+				let redeableMsg = message.toString('utf8').toUpperCase();
+				console.log(redeableMsg);
+
+				if (redeableMsg in swtichToSourceFeedbackMsg) {
+					this.deviceStatus.selectedSource = swtichToSourceFeedbackMsg[redeableMsg];
+					console.log(this.deviceStatus)
+				}
+
+
+				this.checkFeedbacks('set_source')
 
 				this.status(this.STATUS_OK)
 			})
-
-			//this.sendCommand('<T0000750200010078>'); //Switch to signal source 2
-			//this.sendCommand('<T0000750200020079>'); //Switch to signal source 3
-			//this.sendCommand('<T000075020003007A>'); //Switch to signal source 4
-
 		}
 	}
 
@@ -179,72 +192,50 @@ class instance extends instance_skel {
 
 	feedback(feedback, bank) {
 		console.log('RGBlink mini: feedback:' + feedback + " bank:" + bank);
+		console.log(feedback)
+
+		if (feedback.type == 'set_source') {
+			console.log(feedback.options.sourceNumber + ' ' + this.deviceStatus.selectedSource)
+			let ret = (feedback.options.sourceNumber == this.deviceStatus.selectedSource);
+			console.log(ret);
+			return ret;
+		} // else if (.....) {}
+
+		return false
 	}
 
 	initFeedbacks() {
-		var self = this
-		var feedbacks = {}
-
-		feedbacks['playStatus'] = {
-			label: 'Change colors based on Play/Pause status',
-			description: 'Change colors based on Play/Pause status',
+		const feedbacks = {}
+		feedbacks['set_source'] = {
+			type: 'boolean', // Feedbacks can either a simple boolean, or can be an 'advanced' style change (until recently, all feedbacks were 'advanced')
+			label: 'Selected source',
+			description: 'Source of HDMI signal',
+			style: {
+				// The default style change for a boolean feedback
+				// The user will be able to customise these values as well as the fields that will be changed
+				color: this.rgb(255, 255, 255),
+				bgcolor: this.rgb(0, 255, 0)
+			},
+			// options is how the user can choose the condition the feedback activates for
 			options: [
 				{
-					type: 'colorpicker',
-					label: 'Foreground color',
-					id: 'fg',
-					default: self.rgb(255, 255, 255)
-				},
-				{
-					type: 'colorpicker',
-					label: 'Background color',
-					id: 'bg',
-					default: self.rgb(0, 255, 0)
-				},
-				{
 					type: 'dropdown',
-					label: 'Status',
-					id: 'playPause',
-					default: 'Playing',
+					label: 'Source number',
+					id: 'sourceNumber',
+					default: '0',
+					tooltip: 'Choose source number',
 					choices: [
-						{ id: 'Playing', label: 'Playing' },
-						{ id: 'Paused', label: 'Paused' }
-					]
-				}
-			]
+						{ id: '0', label: '1' },
+						{ id: '1', label: '2' },
+						{ id: '2', label: '3' },
+						{ id: '3', label: '4' }
+					],
+					minChoicesForSearch: 0
+				},
+			],
 		}
-		self.setFeedbackDefinitions(feedbacks)
+		this.setFeedbackDefinitions(feedbacks)
 	}
 }
 
 exports = module.exports = instance
-
-//const feedbacks = {}
-// feedbacks['set_source'] = {
-//     type: 'boolean', // Feedbacks can either a simple boolean, or can be an 'advanced' style change (until recently, all feedbacks were 'advanced')
-//     label: 'Brief description of the feedback here',
-//     description: 'Longer description of the feedback',
-//     style: {
-//         // The default style change for a boolean feedback
-//         // The user will be able to customise these values as well as the fields that will be changed
-//         color: self.rgb(0, 0, 0),
-//         bgcolor: self.rgb(255, 0, 0)
-//     },
-//     // options is how the user can choose the condition the feedback activates for
-//     options: [{
-//         type: 'number',
-//         label: 'Source',
-//         id: 'source',
-//         default: 1
-//     }],
-//     callback: function (feedback) {
-// 		console.log('feedbacK:' + feedback)
-//         // This callback will be called whenever companion wants to check if this feedback is 'active' and should affect the button style
-//         if (self.some_device_state.source == options.source) {
-// 			return true
-// 		} else {
-//             return false
-//         }
-//     }
-// }
-// self.setFeedbackDefinitions(feedbacks);
