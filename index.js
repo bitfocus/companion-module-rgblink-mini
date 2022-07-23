@@ -9,19 +9,24 @@ TODO
 const udp = require('../../udp')
 const instance_skel = require('../../instance_skel')
 
-const swtichToSourceMsg = {
+const SWITCH_TO_SOURCE_MSG = {
 	'1': '<T0000750200000077>',
 	'2': '<T0000750200010078>',
 	'3': '<T0000750200020079>',
 	'4': '<T000075020003007A>'
 };
 
-const swtichToSourceFeedbackMsg = {
+const SWITCH_TO_SOURCE_FEEDBACK_MSG = {
 	'<F0000750200000077>': 1,
 	'<F0000750200010078>': 2,
 	'<F0000750200020079>': 3,
 	'<F000075020003007A>': 4
 };
+
+const DISCONNECT_MSG = '<T00006866000000CE>';
+
+const CONNECT_MSG = '<T00006866010000CF>';
+
 
 class instance extends instance_skel {
 
@@ -31,13 +36,13 @@ class instance extends instance_skel {
 
 	constructor(system, id, config) {
 		super(system, id, config)
-		console.log('RGBlink mini: constructor');
+		//console.log('RGBlink mini: constructor');
 		this.initActions();
 		this.initPresets();
 	}
 
 	config_fields() {
-		console.log('RGBlink mini: config_fields');
+		//console.log('RGBlink mini: config_fields');
 		return [
 			{
 				type: 'textinput',
@@ -57,7 +62,8 @@ class instance extends instance_skel {
 	}
 
 	destroy() {
-		console.log('RGBlink mini: destroy');
+		//console.log('RGBlink mini: destroy');
+		this.sendCommand(DISCONNECT_MSG)
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 		}
@@ -66,14 +72,14 @@ class instance extends instance_skel {
 	}
 
 	init() {
-		console.log('RGBlink mini: init');
+		//console.log('RGBlink mini: init');
 		this.initUDPConnection()
 		this.initFeedbacks();
 
 	}
 
 	initActions() {
-		console.log('RGBlink mini: initActions');
+		//console.log('RGBlink mini: initActions');
 		let actions = {}
 
 		actions['switch_to_source'] = {
@@ -95,8 +101,8 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action, bank) => {
-				console.log('onAction');
-				this.sendCommand(swtichToSourceMsg[action.options.sourceNumber]);
+				//console.log('onAction');
+				this.sendCommand(SWITCH_TO_SOURCE_MSG[action.options.sourceNumber]);
 			},
 		}
 
@@ -104,9 +110,9 @@ class instance extends instance_skel {
 	}
 
 	initUDPConnection() {
-		console.log('RGBlink mini: initUDPConnection');
-		console.log(this.socket);
-		console.log(this.config);
+		//console.log('RGBlink mini: initUDPConnection');
+		//console.log(this.socket);
+		//console.log(this.config);
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 			delete this.socket
@@ -119,11 +125,11 @@ class instance extends instance_skel {
 		this.status(this.STATUS_WARNING, 'Connecting')
 
 		if (this.config.host) {
-			console.log('RGBlink mini: initializing....');
+			//console.log('RGBlink mini: initializing....');
 			this.socket = new udp(this.config.host, this.config.port)
-			console.log(this.socket);
+			//console.log(this.socket);
 			this.socket.on('status_change', (status, message) => {
-				console.log('RGBlink mini: initUDPConnection status_change:' + status + ' ' + message);
+				//console.log('RGBlink mini: initUDPConnection status_change:' + status + ' ' + message);
 				this.status(status, message)
 			})
 
@@ -134,9 +140,9 @@ class instance extends instance_skel {
 			})
 
 			this.socket.on('data', (message, metadata) => {
-				console.log('RGBlink mini: initUDPConnection data');
-				console.log(message);
-				console.log(metadata);
+				//console.log('RGBlink mini: initUDPConnection data');
+				//console.log(message);
+				//console.log(metadata);
 
 				if (metadata.size !== 19) {
 					this.status(this.STATUS_WARNING, 'Feedback length != 19')
@@ -149,23 +155,33 @@ class instance extends instance_skel {
 				}
 
 				let redeableMsg = message.toString('utf8').toUpperCase();
-				console.log(redeableMsg);
+				console.log('GOT  ' + redeableMsg);
 
-				if (redeableMsg in swtichToSourceFeedbackMsg) {
-					this.deviceStatus.selectedSource = swtichToSourceFeedbackMsg[redeableMsg];
-					console.log(this.deviceStatus)
+				if(redeableMsg.includes('FFFFFFFF')){
+					this.status(this.STATUS_WARNING, 'Feedback with error:' + redeableMsg)
+					return;
 				}
 
+				// end of validate section
+				this.status(this.STATUS_OK)
 
+				if (redeableMsg in SWITCH_TO_SOURCE_FEEDBACK_MSG) {
+					this.deviceStatus.selectedSource = SWITCH_TO_SOURCE_FEEDBACK_MSG[redeableMsg];
+					//console.log(this.deviceStatus)
+				}
 				this.checkFeedbacks('set_source')
 
-				this.status(this.STATUS_OK)
+				
 			})
+
+
+
+			this.sendCommand(CONNECT_MSG);
 		}
 	}
 
 	initPresets(){
-		console.log('initPresets');
+		//console.log('initPresets');
 		let presets = [];
 		presets.push({
 			category: 'Select source',
@@ -191,8 +207,6 @@ class instance extends instance_skel {
 						sourceNumber: '1',
 					},
 					style: {
-						// The default style change for a boolean feedback
-						// The user will be able to customise these values as well as the fields that will be changed
 						color: this.rgb(255, 255, 255),
 						bgcolor: this.rgb(0, 255, 0)
 					},
@@ -200,23 +214,23 @@ class instance extends instance_skel {
 			],
 		});		
 		this.setPresetDefinitions(presets);
-		console.log('after initPresets');
+		//console.log('after initPresets');
 	}
 
 	sendCommand(cmd) {
-		console.log('RGBlink mini: sendCommand');
+		//console.log('RGBlink mini: sendCommand');
 		//console.log(this.socket.connected);
-		console.log(cmd);
 		if (cmd !== undefined && cmd != '') {
 			if (this.socket !== undefined /*&& this.socket.connected*/) {
 				this.socket.send(cmd)
+				console.log('SENT ' + cmd);
 				//console.log(this.socket);
 			}
 		}
 	}
 
 	updateConfig(config) {
-		console.log('RGBlink mini: updateConfig');
+		//console.log('RGBlink mini: updateConfig');
 		let resetConnection = false
 
 		if (this.config.host != config.host) {
@@ -231,13 +245,13 @@ class instance extends instance_skel {
 	}
 
 	feedback(feedback, bank) {
-		console.log('RGBlink mini: feedback:' + feedback + " bank:" + bank);
-		console.log(feedback)
+		//console.log('RGBlink mini: feedback:' + feedback + " bank:" + bank);
+		//console.log(feedback)
 
 		if (feedback.type == 'set_source') {
-			console.log(feedback.options.sourceNumber + ' ' + this.deviceStatus.selectedSource)
+			//console.log(feedback.options.sourceNumber + ' ' + this.deviceStatus.selectedSource)
 			let ret = (feedback.options.sourceNumber == this.deviceStatus.selectedSource);
-			console.log(ret);
+			//console.log(ret);
 			return ret;
 		} // else if (.....) {}
 
