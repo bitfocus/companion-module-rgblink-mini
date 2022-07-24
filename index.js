@@ -4,6 +4,7 @@ TODO
 * inne akcje (np pip)
 * przetestować feedbacki do pip
 * presets
+* odpytywanie o status co chwila
 */
 
 const udp = require('../../udp')
@@ -23,19 +24,36 @@ const SWITCH_TO_SOURCE_FEEDBACK_MSG = {
 	'<F000075020003007A>': 4
 };
 
+const SWITCH_MODE_AUTO = 0;
+const SWITCH_MODE_TBAR = 1;
+
+const SWITCH_MODE_MSG = {};
+SWITCH_MODE_MSG[SWITCH_MODE_AUTO] = '<T000078120000008A>';
+SWITCH_MODE_MSG[SWITCH_MODE_TBAR] = '<T000078120100008B>';
+
+const SWITCH_MODE_FEEDBACK_MSG = {
+	'<F000078120000008A>' : SWITCH_MODE_AUTO,
+	'<F000078120100008B>' : SWITCH_MODE_TBAR,
+};
+
+// write mode
 const DISCONNECT_MSG = '<T00006866000000CE>';
-
 const CONNECT_MSG = '<T00006866010000CF>';
-
+const CONNECT_FEEDBACK_MSG = '<F00006866010000CF>';
 
 class instance extends instance_skel {
+	BACKGROUND_COLOR_PREVIEW;
+	BACKGROUND_COLOR_ON_AIR;
 
 	deviceStatus = {
-		'selectedSource': undefined
+		selectedSource: undefined,
+		switchMode : undefined,
 	}
 
 	constructor(system, id, config) {
 		super(system, id, config)
+		this.BACKGROUND_COLOR_PREVIEW = this.rgb(0, 255, 0);
+		this.BACKGROUND_COLOR_ON_AIR = this.rgb(0, 255, 0);
 		//console.log('RGBlink mini: constructor');
 		this.initActions();
 		this.initPresets();
@@ -105,6 +123,27 @@ class instance extends instance_skel {
 				this.sendCommand(SWITCH_TO_SOURCE_MSG[action.options.sourceNumber]);
 			},
 		}
+		actions['switch_mode'] = {
+			label: 'Switch mode (T-BAR/Auto)',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Mode',
+					id: 'mode',
+					default: SWITCH_MODE_AUTO,
+					tooltip: 'Choose mode',
+					choices: [
+						{ id: SWITCH_MODE_AUTO, label: 'Auto (Take)' },
+						{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
+					],
+					minChoicesForSearch: 0
+				},
+			],
+			callback: (action, bank) => {
+				//console.log('onAction');
+				this.sendCommand(SWITCH_MODE_MSG[action.options.mode]);
+			},
+		}		
 
 		this.setActions(actions)
 	}
@@ -130,7 +169,6 @@ class instance extends instance_skel {
 			//console.log(this.socket);
 			this.socket.on('status_change', (status, message) => {
 				//console.log('RGBlink mini: initUDPConnection status_change:' + status + ' ' + message);
-				this.status(status, message)
 			})
 
 			this.socket.on('error', (err) => {
@@ -163,13 +201,23 @@ class instance extends instance_skel {
 				}
 
 				// end of validate section
-				this.status(this.STATUS_OK)
+				
 
-				if (redeableMsg in SWITCH_TO_SOURCE_FEEDBACK_MSG) {
+				if(redeableMsg == CONNECT_FEEDBACK_MSG){
+					// OK, connect confirmed
+					this.status(this.STATUS_OK)
+				} else if (redeableMsg in SWITCH_TO_SOURCE_FEEDBACK_MSG) {
+					this.status(this.STATUS_OK)
 					this.deviceStatus.selectedSource = SWITCH_TO_SOURCE_FEEDBACK_MSG[redeableMsg];
-					//console.log(this.deviceStatus)
+				} else if (redeableMsg in SWITCH_MODE_FEEDBACK_MSG){
+					this.status(this.STATUS_OK)
+					this.deviceStatus.switchMode = SWITCH_MODE_FEEDBACK_MSG[redeableMsg];
+				} else {
+					console.log('Unrecognized message:' + redeableMsg)
 				}
+
 				this.checkFeedbacks('set_source')
+				this.checkFeedbacks('set_mode')
 
 				
 			})
@@ -208,7 +256,7 @@ class instance extends instance_skel {
 					},
 					style: {
 						color: this.rgb(255, 255, 255),
-						bgcolor: this.rgb(0, 255, 0)
+						bgcolor: this.BACKGROUND_COLOR_ON_AIR
 					},
 				}
 			],
@@ -253,7 +301,11 @@ class instance extends instance_skel {
 			let ret = (feedback.options.sourceNumber == this.deviceStatus.selectedSource);
 			//console.log(ret);
 			return ret;
-		} // else if (.....) {}
+		} else if (feedback.type == 'set_mode'){
+			let ret = (feedback.options.mode == this.deviceStatus.switchMode);
+			//console.log('feedback:' + feedback.options.mode + ' ' + this.deviceStatus.switchMode + ' ' + ret)
+			return ret;
+		}
 
 		return false
 	}
@@ -261,16 +313,13 @@ class instance extends instance_skel {
 	initFeedbacks() {
 		const feedbacks = {}
 		feedbacks['set_source'] = {
-			type: 'boolean', // Feedbacks can either a simple boolean, or can be an 'advanced' style change (until recently, all feedbacks were 'advanced')
+			type: 'boolean',
 			label: 'Selected source',
 			description: 'Source of HDMI signal',
 			style: {
-				// The default style change for a boolean feedback
-				// The user will be able to customise these values as well as the fields that will be changed
 				color: this.rgb(255, 255, 255),
-				bgcolor: this.rgb(0, 255, 0)
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR
 			},
-			// options is how the user can choose the condition the feedback activates for
 			options: [
 				{
 					type: 'dropdown',
@@ -288,6 +337,29 @@ class instance extends instance_skel {
 				},
 			],
 		}
+		feedbacks['set_mode'] = {
+			type: 'boolean', 
+			label: 'Selected mode',
+			description: 'Mode Auto/T-Bar',
+			style: {
+				color: this.rgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Mode',
+					id: 'mode',
+					default: SWITCH_MODE_AUTO,
+					tooltip: 'Choose mode',
+					choices: [
+						{ id: SWITCH_MODE_AUTO, label: 'Auto (Take)' },
+						{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
+					],
+					minChoicesForSearch: 0
+				},
+			],
+		}		
 		this.setFeedbackDefinitions(feedbacks)
 	}
 }
