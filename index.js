@@ -1,9 +1,10 @@
 /*
 TODO
-* inne akcje (np pip)
-* przetestować feedbacki do pip
+* odpytywanie co chwila o status auto/tbar
+* validating checksum
 * presets
-* odpytywanie o status co chwila
+* zastanowić się nad parametrem SN, możę go trzeba obśłużyć
+* ? inne akcje (np pip) + przetestować feedbacki do pip
 */
 
 const udp = require('../../udp')
@@ -23,6 +24,13 @@ const SWITCH_TO_SOURCE_FEEDBACK_MSG = {
 	'<F000075020003007A>': 4
 };
 
+const READ_SOURCE_FEEDBACK_MSG = {
+	'<F0000750300000078>': 1,
+	'<F0000750300010079>': 2,
+	'<F000075030002007A>': 3,
+	'<F000075030003007B>': 4
+};
+
 const SWITCH_MODE_AUTO = 0;
 const SWITCH_MODE_TBAR = 1;
 
@@ -31,8 +39,8 @@ SWITCH_MODE_MSG[SWITCH_MODE_AUTO] = '<T000078120000008A>';
 SWITCH_MODE_MSG[SWITCH_MODE_TBAR] = '<T000078120100008B>';
 
 const SWITCH_MODE_FEEDBACK_MSG = {
-	'<F000078120000008A>' : SWITCH_MODE_AUTO,
-	'<F000078120100008B>' : SWITCH_MODE_TBAR,
+	'<F000078120000008A>': SWITCH_MODE_AUTO,
+	'<F000078120100008B>': SWITCH_MODE_TBAR,
 };
 
 // write mode
@@ -43,10 +51,11 @@ const CONNECT_FEEDBACK_MSG = '<F00006866010000CF>';
 class instance extends instance_skel {
 	BACKGROUND_COLOR_PREVIEW;
 	BACKGROUND_COLOR_ON_AIR;
+	intervalHandler = undefined;
 
 	deviceStatus = {
 		selectedSource: undefined,
-		switchMode : undefined,
+		switchMode: undefined,
 	}
 
 	constructor(system, id, config) {
@@ -84,7 +93,7 @@ class instance extends instance_skel {
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 		}
-
+        clearInterval(this.intervalHandler);
 		this.debug('destroy', this.id)
 	}
 
@@ -92,7 +101,10 @@ class instance extends instance_skel {
 		//console.log('RGBlink mini: init');
 		this.initUDPConnection()
 		this.initFeedbacks();
-
+		var self = this;
+		this.intervalHandler = setInterval(function(){
+			self.askAboutSignal();
+		}, 1000);
 	}
 
 	initActions() {
@@ -182,6 +194,10 @@ class instance extends instance_skel {
 		this.setActions(actions)
 	}
 
+	askAboutSignal() {
+		this.sendCommand('<T0000750300000078>')
+	}
+
 	initUDPConnection() {
 		//console.log('RGBlink mini: initUDPConnection');
 		//console.log(this.socket);
@@ -229,40 +245,44 @@ class instance extends instance_skel {
 				let redeableMsg = message.toString('utf8').toUpperCase();
 				console.log('GOT  ' + redeableMsg);
 
-				if(redeableMsg.includes('FFFFFFFF')){
+				if (redeableMsg.includes('FFFFFFFF')) {
 					this.status(this.STATUS_WARNING, 'Feedback with error:' + redeableMsg)
 					return;
 				}
 
 				// end of validate section
-				
-
-				if(redeableMsg == CONNECT_FEEDBACK_MSG){
-					// OK, connect confirmed
-					this.status(this.STATUS_OK)
-				} else if (redeableMsg in SWITCH_TO_SOURCE_FEEDBACK_MSG) {
-					this.status(this.STATUS_OK)
-					this.deviceStatus.selectedSource = SWITCH_TO_SOURCE_FEEDBACK_MSG[redeableMsg];
-				} else if (redeableMsg in SWITCH_MODE_FEEDBACK_MSG){
-					this.status(this.STATUS_OK)
-					this.deviceStatus.switchMode = SWITCH_MODE_FEEDBACK_MSG[redeableMsg];
-				} else {
-					console.log('Unrecognized message:' + redeableMsg)
-				}
-
-				this.checkFeedbacks('set_source')
-				this.checkFeedbacks('set_mode')
-
-				
+				this.parseAndConsumeFeedback(redeableMsg);
 			})
 
 
 
 			this.sendCommand(CONNECT_MSG);
+			this.askAboutSignal();
 		}
 	}
 
-	initPresets(){
+	parseAndConsumeFeedback(redeableMsg) {
+		if (redeableMsg == CONNECT_FEEDBACK_MSG) {
+			// OK, connect confirmed
+			this.status(this.STATUS_OK)
+		} else if (redeableMsg in SWITCH_TO_SOURCE_FEEDBACK_MSG) {
+			this.status(this.STATUS_OK)
+			this.deviceStatus.selectedSource = SWITCH_TO_SOURCE_FEEDBACK_MSG[redeableMsg];
+		} else if (redeableMsg in SWITCH_MODE_FEEDBACK_MSG) {
+			this.status(this.STATUS_OK)
+			this.deviceStatus.switchMode = SWITCH_MODE_FEEDBACK_MSG[redeableMsg];
+		} else if (redeableMsg in READ_SOURCE_FEEDBACK_MSG){
+		    this.status(this.STATUS_OK)
+		    this.deviceStatus.selectedSource = READ_SOURCE_FEEDBACK_MSG[redeableMsg];
+		} else {
+			console.log('Unrecognized message:' + redeableMsg)
+		}
+
+		this.checkFeedbacks('set_source')
+		this.checkFeedbacks('set_mode')
+	}
+
+	initPresets() {
 		//console.log('initPresets');
 		let presets = [];
 		presets.push({
@@ -282,7 +302,7 @@ class instance extends instance_skel {
 					}
 				}
 			],
-			feedbacks:[
+			feedbacks: [
 				{
 					type: 'set_source',
 					options: {
@@ -294,7 +314,7 @@ class instance extends instance_skel {
 					},
 				}
 			],
-		});		
+		});
 		this.setPresetDefinitions(presets);
 		//console.log('after initPresets');
 	}
@@ -335,7 +355,7 @@ class instance extends instance_skel {
 			let ret = (feedback.options.sourceNumber == this.deviceStatus.selectedSource);
 			//console.log(ret);
 			return ret;
-		} else if (feedback.type == 'set_mode'){
+		} else if (feedback.type == 'set_mode') {
 			let ret = (feedback.options.mode == this.deviceStatus.switchMode);
 			//console.log('feedback:' + feedback.options.mode + ' ' + this.deviceStatus.switchMode + ' ' + ret)
 			return ret;
@@ -372,7 +392,7 @@ class instance extends instance_skel {
 			],
 		}
 		feedbacks['set_mode'] = {
-			type: 'boolean', 
+			type: 'boolean',
 			label: 'Selected mode',
 			description: 'Mode Auto/T-Bar',
 			style: {
@@ -393,7 +413,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0
 				},
 			],
-		}		
+		}
 		this.setFeedbackDefinitions(feedbacks)
 	}
 }
