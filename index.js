@@ -1,9 +1,7 @@
 /*
 TODO
-* odpytywanie co chwila o status auto/tbar
-* presets
-* zastanowić się nad parametrem SN, możę go trzeba obśłużyć
-* ? inne akcje (np pip) + przetestować feedbacki do pip
+* SN ? Currently always zero
+* PIP ?
 */
 
 const udp = require('../../udp')
