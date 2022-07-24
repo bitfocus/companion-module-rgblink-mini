@@ -92,7 +92,7 @@ class instance extends instance_skel {
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 		}
-        clearInterval(this.intervalHandler);
+		clearInterval(this.intervalHandler);
 		this.debug('destroy', this.id)
 	}
 
@@ -101,7 +101,7 @@ class instance extends instance_skel {
 		this.initUDPConnection()
 		this.initFeedbacks();
 		var self = this;
-		this.intervalHandler = setInterval(function(){
+		this.intervalHandler = setInterval(function () {
 			self.askAboutSignal();
 		}, 1000);
 	}
@@ -246,11 +246,11 @@ class instance extends instance_skel {
 
 				// Checksum checking
 				let sum = 0;
-				for(var i = 4; i <=14; i+=2){
-				    sum += parseInt(redeableMsg.substr(i,2),16);
+				for (var i = 4; i <= 14; i += 2) {
+					sum += parseInt(redeableMsg.substr(i, 2), 16);
 				}
-				let msgCheckSum = parseInt(redeableMsg.substr(16,2),16);
-				if(sum != msgCheckSum){
+				let msgCheckSum = parseInt(redeableMsg.substr(16, 2), 16);
+				if (sum != msgCheckSum) {
 					this.status(this.STATUS_WARNING, 'Incorrect checksum')
 					return;
 				}
@@ -281,9 +281,9 @@ class instance extends instance_skel {
 		} else if (redeableMsg in SWITCH_MODE_FEEDBACK_MSG) {
 			this.status(this.STATUS_OK)
 			this.deviceStatus.switchMode = SWITCH_MODE_FEEDBACK_MSG[redeableMsg];
-		} else if (redeableMsg in READ_SOURCE_FEEDBACK_MSG){
-		    this.status(this.STATUS_OK)
-		    this.deviceStatus.selectedSource = READ_SOURCE_FEEDBACK_MSG[redeableMsg];
+		} else if (redeableMsg in READ_SOURCE_FEEDBACK_MSG) {
+			this.status(this.STATUS_OK)
+			this.deviceStatus.selectedSource = READ_SOURCE_FEEDBACK_MSG[redeableMsg];
 		} else {
 			console.log('Unrecognized message:' + redeableMsg)
 		}
