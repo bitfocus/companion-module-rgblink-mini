@@ -1,7 +1,6 @@
 /*
 TODO
 * odpytywanie co chwila o status auto/tbar
-* validating checksum
 * presets
 * zastanowić się nad parametrem SN, możę go trzeba obśłużyć
 * ? inne akcje (np pip) + przetestować feedbacki do pip
@@ -244,6 +243,17 @@ class instance extends instance_skel {
 
 				let redeableMsg = message.toString('utf8').toUpperCase();
 				console.log('GOT  ' + redeableMsg);
+
+				// Checksum checking
+				let sum = 0;
+				for(var i = 4; i <=14; i+=2){
+				    sum += parseInt(redeableMsg.substr(i,2),16);
+				}
+				let msgCheckSum = parseInt(redeableMsg.substr(16,2),16);
+				if(sum != msgCheckSum){
+					this.status(this.STATUS_WARNING, 'Incorrect checksum')
+					return;
+				}
 
 				if (redeableMsg.includes('FFFFFFFF')) {
 					this.status(this.STATUS_WARNING, 'Feedback with error:' + redeableMsg)
