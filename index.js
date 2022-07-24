@@ -16,20 +16,6 @@ const SWITCH_TO_SOURCE_MSG = {
 	'4': '<T000075020003007A>'
 };
 
-const SWITCH_TO_SOURCE_FEEDBACK_MSG = {
-	'<F0000750200000077>': 1,
-	'<F0000750200010078>': 2,
-	'<F0000750200020079>': 3,
-	'<F000075020003007A>': 4
-};
-
-const READ_SOURCE_FEEDBACK_MSG = {
-	'<F0000750300000078>': 1,
-	'<F0000750300010079>': 2,
-	'<F000075030002007A>': 3,
-	'<F000075030003007B>': 4
-};
-
 const SWITCH_MODE_AUTO = 0;
 const SWITCH_MODE_TBAR = 1;
 
@@ -37,15 +23,9 @@ const SWITCH_MODE_MSG = {};
 SWITCH_MODE_MSG[SWITCH_MODE_AUTO] = '<T000078120000008A>';
 SWITCH_MODE_MSG[SWITCH_MODE_TBAR] = '<T000078120100008B>';
 
-const SWITCH_MODE_FEEDBACK_MSG = {
-	'<F000078120000008A>': SWITCH_MODE_AUTO,
-	'<F000078120100008B>': SWITCH_MODE_TBAR,
-};
-
 // write mode
 const DISCONNECT_MSG = '<T00006866000000CE>';
 const CONNECT_MSG = '<T00006866010000CF>';
-const CONNECT_FEEDBACK_MSG = '<F00006866010000CF>';
 
 class instance extends instance_skel {
 	BACKGROUND_COLOR_PREVIEW;
@@ -242,7 +222,7 @@ class instance extends instance_skel {
 				}
 
 				let redeableMsg = message.toString('utf8').toUpperCase();
-				console.log('GOT  ' + redeableMsg);
+				//console.log('GOT  ' + redeableMsg);
 
 				// Checksum checking
 				let sum = 0;
@@ -255,6 +235,11 @@ class instance extends instance_skel {
 					return;
 				}
 
+				if (redeableMsg[0] != "<" || redeableMsg[1] != "F" || redeableMsg[18] != ">") {
+					this.status(this.STATUS_WARNING, 'Message is not a feedback:' + redeableMsg)
+					return;
+				}
+
 				if (redeableMsg.includes('FFFFFFFF')) {
 					this.status(this.STATUS_WARNING, 'Feedback with error:' + redeableMsg)
 					return;
@@ -262,6 +247,9 @@ class instance extends instance_skel {
 
 				// end of validate section
 				this.parseAndConsumeFeedback(redeableMsg);
+				this.checkFeedbacks('set_source')
+				this.checkFeedbacks('set_mode')
+
 			})
 
 
@@ -271,25 +259,62 @@ class instance extends instance_skel {
 		}
 	}
 
+	logFeedback(redeableMsg, info) {
+		console.log('Feedback:' + redeableMsg + ' ' + info)
+	}
+
 	parseAndConsumeFeedback(redeableMsg) {
-		if (redeableMsg == CONNECT_FEEDBACK_MSG) {
-			// OK, connect confirmed
-			this.status(this.STATUS_OK)
-		} else if (redeableMsg in SWITCH_TO_SOURCE_FEEDBACK_MSG) {
-			this.status(this.STATUS_OK)
-			this.deviceStatus.selectedSource = SWITCH_TO_SOURCE_FEEDBACK_MSG[redeableMsg];
-		} else if (redeableMsg in SWITCH_MODE_FEEDBACK_MSG) {
-			this.status(this.STATUS_OK)
-			this.deviceStatus.switchMode = SWITCH_MODE_FEEDBACK_MSG[redeableMsg];
-		} else if (redeableMsg in READ_SOURCE_FEEDBACK_MSG) {
-			this.status(this.STATUS_OK)
-			this.deviceStatus.selectedSource = READ_SOURCE_FEEDBACK_MSG[redeableMsg];
-		} else {
-			console.log('Unrecognized message:' + redeableMsg)
+		let ADDR = redeableMsg.substr(2, 2);
+		let SN = redeableMsg.substr(4, 2);
+		let CMD = redeableMsg.substr(6, 2);
+		let DAT1 = redeableMsg.substr(8, 2);
+		let DAT2 = redeableMsg.substr(10, 2);
+		let DAT3 = redeableMsg.substr(12, 2);
+		let DAT4 = redeableMsg.substr(14, 2);
+
+		let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4;
+
+		if (CMD == "68") {
+			// 0x68 Establish/disconnect communication
+			// eg. '<F00006866010000CF>';
+			if (DAT2 = '00') {
+				this.status(this.STATUS_OK);
+				return this.logFeedback(redeableMsg, 'Device disconnected');
+			} else if (DAT2 == '01') {
+				this.status(this.STATUS_OK);
+				return this.logFeedback(redeableMsg, 'Device connected');
+			}
+		} else if (CMD == '75') {
+			// 0x75 Read/write video processor information
+			if (DAT1 == '02' || DAT1 == '03') {
+				// Signal source switching Settings
+				// 0x02(Write), 0x03(Read)
+				let src = parseInt(DAT3) + 1;
+				if (src >= 1 && src <= 4) {
+					this.status(this.STATUS_OK);
+					this.deviceStatus.selectedSource = src;
+					return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.selectedSource);
+				}
+			}
+			// PIP not parsed, maybe in future
+		} else if (CMD == '78') {
+			// 0x78 Switching Setting
+			if (DAT1 == '12' || DAT1 == '13') {
+				// T-BAR/Auto
+				if (DAT2 == '00') {
+					this.status(this.STATUS_OK);
+					this.deviceStatus.switchMode = parseInt(DAT2);
+					return this.logFeedback(redeableMsg, 'Mode Auto');
+				} else if (DAT2 == '01') {
+					this.status(this.STATUS_OK);
+					this.deviceStatus.switchMode = parseInt(DAT2);
+					return this.logFeedback(redeableMsg, 'Mode T-BAR');
+				}
+			}
+			// Switching effect setting - nod parsed, maybe in future
 		}
 
-		this.checkFeedbacks('set_source')
-		this.checkFeedbacks('set_mode')
+		console.log('Unrecognized feedback message:' + redeableMsg)
 	}
 
 	initPresets() {
