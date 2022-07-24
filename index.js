@@ -30,6 +30,8 @@ const CONNECT_MSG = '<T00006866010000CF>';
 class instance extends instance_skel {
 	BACKGROUND_COLOR_PREVIEW;
 	BACKGROUND_COLOR_ON_AIR;
+	BACKGROUND_COLOR_DEFAULT;
+	TEXT_COLOR;
 	intervalHandler = undefined;
 
 	deviceStatus = {
@@ -40,7 +42,9 @@ class instance extends instance_skel {
 	constructor(system, id, config) {
 		super(system, id, config)
 		this.BACKGROUND_COLOR_PREVIEW = this.rgb(0, 255, 0);
-		this.BACKGROUND_COLOR_ON_AIR = this.rgb(0, 255, 0);
+		this.BACKGROUND_COLOR_ON_AIR = this.rgb(255, 0, 0);
+		this.BACKGROUND_COLOR_DEFAULT = this.rgb(0, 0, 0);
+		this.TEXT_COLOR = this.rgb(255, 255, 255);
 		//console.log('RGBlink mini: constructor');
 		this.initActions();
 		this.initPresets();
@@ -175,6 +179,7 @@ class instance extends instance_skel {
 
 	askAboutSignal() {
 		this.sendCommand('<T0000750300000078>')
+		this.sendCommand('<T000078130000008B>')
 	}
 
 	initUDPConnection() {
@@ -320,36 +325,153 @@ class instance extends instance_skel {
 	initPresets() {
 		//console.log('initPresets');
 		let presets = [];
+		for (var i = 1; i <= 4; i++) {
+			presets.push({
+				category: 'Select source on live output',
+				bank: {
+					style: 'text',
+					text: 'Live source\\n' + i,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT
+				},
+				actions: [
+					{
+						action: 'switch_mode_and_source',
+						options: {
+							sourceNumber: i,
+							mode: SWITCH_MODE_AUTO
+						}
+					}
+				],
+				feedbacks: [
+					{
+						type: 'set_source',
+						options: {
+							sourceNumber: i,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR
+						},
+					}
+				],
+			});
+		}	
+		for (var i = 1; i <= 4; i++) {
+			presets.push({
+				category: 'Select source on preview',
+				bank: {
+					style: 'text',
+					text: 'Preview source\\n' + i,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT
+				},
+				actions: [
+					{
+						action: 'switch_mode_and_source',
+						options: {
+							sourceNumber: i,
+							mode: SWITCH_MODE_TBAR
+						}
+					}
+				],
+			});
+		}	
+		for (var i = 1; i <= 4; i++) {
+			presets.push({
+				category: 'Select source',
+				bank: {
+					style: 'text',
+					text: 'Source\\n' + i,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT
+				},
+				actions: [
+					{
+						action: 'switch_to_source',
+						options: {
+							sourceNumber: i,
+						}
+					}
+				],
+				feedbacks: [
+					{
+						type: 'set_source',
+						options: {
+							sourceNumber: i,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR
+						},
+					}
+				],
+			});
+		}
 		presets.push({
-			category: 'Select source',
+			category: 'Select switch mode (Auto / T-BAR)',
 			bank: {
 				style: 'text',
-				text: 'Source\\n1',
+				text: 'Switch mode\\nAuto',
 				size: 'auto',
-				color: '16777215',
-				bgcolor: 0
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT
 			},
 			actions: [
 				{
-					action: 'switch_to_source',
+					action: 'switch_mode',
 					options: {
-						sourceNumber: '1',
+						mode: SWITCH_MODE_AUTO,
 					}
 				}
 			],
 			feedbacks: [
 				{
-					type: 'set_source',
+					type: 'set_mode',
 					options: {
-						sourceNumber: '1',
+						mode: SWITCH_MODE_AUTO,
 					},
 					style: {
-						color: this.rgb(255, 255, 255),
+						color: this.TEXT_COLOR,
 						bgcolor: this.BACKGROUND_COLOR_ON_AIR
 					},
 				}
 			],
-		});
+		});	
+		presets.push({
+			category: 'Select switch mode (Auto / T-BAR)',
+			bank: {
+				style: 'text',
+				text: 'Switch mode\\nT-BAR',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT
+			},
+			actions: [
+				{
+					action: 'switch_mode',
+					options: {
+						mode: SWITCH_MODE_TBAR,
+					}
+				}
+			],
+			feedbacks: [
+				{
+					type: 'set_mode',
+					options: {
+						mode: SWITCH_MODE_TBAR,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_PREVIEW
+					},
+				}
+			],
+		});			
+		
 		this.setPresetDefinitions(presets);
 		//console.log('after initPresets');
 	}
