@@ -2,7 +2,6 @@
 TODO
 * SN ? Currently always zero
 * PIP ?
-* configure asking for status every 1 sec + changing status, if device not respond in some time
 */
 
 const udp = require('../../udp')
