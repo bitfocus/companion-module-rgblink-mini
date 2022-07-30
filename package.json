@@ -2,13 +2,13 @@
   "name": "rgblink-mini",
   "version": "1.0.0",
   "description": "RGBlink mini",
-	"manufacturer": "RGBlink",
-	"product": "mini",
-  "shortname": "mini",  
+  "manufacturer": "RGBlink",
+  "product": "mini",
+  "shortname": "mini",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Marcin, Krzysztof",
+  "author": "Marcin Gumułka <marcingum@gmail.com>; Krzysztof Foszcz <foszczkrzysztof@gmail.com>",
   "license": "MIT"
 }
