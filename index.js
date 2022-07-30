@@ -2,6 +2,7 @@
 TODO
 * SN ? Currently always zero
 * PIP ?
+* configure asking for status every 1 sec + changing status, if device not respond in some time
 */
 
 const udp = require('../../udp')
@@ -210,51 +211,7 @@ class instance extends instance_skel {
 			})
 
 			this.socket.on('data', (message, metadata) => {
-				//console.log('RGBlink mini: initUDPConnection data');
-				//console.log(message);
-				//console.log(metadata);
-
-				if (metadata.size !== 19) {
-					this.status(this.STATUS_WARNING, 'Feedback length != 19')
-					return
-				}
-
-				if (metadata.address != this.config.host || metadata.port != this.config.port) {
-					this.status(
-						this.STATUS_WARNING,
-						'Feedback received from different sender ' + metadata.address + ':' + metadata.port
-					)
-					return
-				}
-
-				let redeableMsg = message.toString('utf8').toUpperCase()
-				//console.log('GOT  ' + redeableMsg);
-
-				// Checksum checking
-				let sum = 0
-				for (var i = 4; i <= 14; i += 2) {
-					sum += parseInt(redeableMsg.substr(i, 2), 16)
-				}
-				let msgCheckSum = parseInt(redeableMsg.substr(16, 2), 16)
-				if (sum != msgCheckSum) {
-					this.status(this.STATUS_WARNING, 'Incorrect checksum')
-					return
-				}
-
-				if (redeableMsg[0] != '<' || redeableMsg[1] != 'F' || redeableMsg[18] != '>') {
-					this.status(this.STATUS_WARNING, 'Message is not a feedback:' + redeableMsg)
-					return
-				}
-
-				if (redeableMsg.includes('FFFFFFFF')) {
-					this.status(this.STATUS_WARNING, 'Feedback with error:' + redeableMsg)
-					return
-				}
-
-				// end of validate section
-				this.parseAndConsumeFeedback(redeableMsg)
-				this.checkFeedbacks('set_source')
-				this.checkFeedbacks('set_mode')
+				this.onDataReceivedFromDevice(message, metadata)
 			})
 
 			this.sendCommand(CONNECT_MSG)
@@ -262,8 +219,67 @@ class instance extends instance_skel {
 		}
 	}
 
+	onDataReceivedFromDevice(message, metadata) {
+		//console.log('RGBlink mini: initUDPConnection data');
+		//console.log(message);
+		//console.log(metadata);
+
+
+		// consume message, if received data are valid
+		let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
+		if (redeableMsg) {
+			this.parseAndConsumeFeedback(redeableMsg)
+
+			this.checkFeedbacks('set_source')
+			this.checkFeedbacks('set_mode')
+		}
+	}
+
 	logFeedback(redeableMsg, info) {
 		console.log('Feedback:' + redeableMsg + ' ' + info)
+	}
+
+	validateReceivedDataAndTranslateMessage(message, metadata) {
+		if (metadata.size !== 19) {
+			this.status(this.STATUS_WARNING, 'Feedback length != 19')
+			return false
+		}
+
+		if (metadata.address != this.config.host || metadata.port != this.config.port) {
+			this.status(
+				this.STATUS_WARNING,
+				'Feedback received from different sender ' + metadata.address + ':' + metadata.port
+			)
+			return false
+		}
+
+		let redeableMsg = message.toString('utf8').toUpperCase()
+		//console.log('GOT  ' + redeableMsg);
+
+		// Checksum checking
+		let sum = 0
+		for (var i = 4; i <= 14; i += 2) {
+			sum += parseInt(redeableMsg.substr(i, 2), 16)
+		}
+		let msgCheckSum = parseInt(redeableMsg.substr(16, 2), 16)
+		if (sum != msgCheckSum) {
+			this.status(this.STATUS_WARNING, 'Incorrect checksum')
+			return false
+		}
+
+		if (redeableMsg[0] != '<' || redeableMsg[1] != 'F' || redeableMsg[18] != '>') {
+			this.status(this.STATUS_WARNING, 'Message is not a feedback:' + redeableMsg)
+			return false
+		}
+
+		if (redeableMsg.includes('FFFFFFFF')) {
+			this.status(this.STATUS_WARNING, 'Feedback with error:' + redeableMsg)
+			return false
+		}
+		// end of validate section
+
+		return redeableMsg
+
 	}
 
 	parseAndConsumeFeedback(redeableMsg) {
