@@ -1,7 +1,9 @@
 /*
 TODO
 * SN ? Currently always zero
-* PIP ?
+* switch effect?
+* detect device is disconnected
+* undocummented options (like select pip layer?)
 */
 
 const udp = require('../../udp')
@@ -25,6 +27,21 @@ SWITCH_MODE_MSG[SWITCH_MODE_TBAR] = '<T000078120100008B>'
 const DISCONNECT_MSG = '<T00006866000000CE>'
 const CONNECT_MSG = '<T00006866010000CF>'
 
+const PIP_MODES = {
+	0: 'PIP off',
+	1: 'PWP center',
+	2: 'PWP left top',
+	3: 'PWP right top',
+	4: 'PWP left bottom',
+	5: 'PWP right bottom',
+	6: 'PBP top',
+	7: 'PBP bottom',
+	8: 'PBP left',
+	9: 'PBP right',
+}
+
+const PARSE_INT_HEX_MODE = 16
+
 class instance extends instance_skel {
 	BACKGROUND_COLOR_PREVIEW
 	BACKGROUND_COLOR_ON_AIR
@@ -35,6 +52,7 @@ class instance extends instance_skel {
 	deviceStatus = {
 		selectedSource: undefined,
 		switchMode: undefined,
+		pipMode: undefined,
 	}
 
 	constructor(system, id, config) {
@@ -180,13 +198,38 @@ class instance extends instance_skel {
 				this.sendCommand(SWITCH_MODE_MSG[action.options.mode] + SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
 			},
 		}
+		actions['pip_mode'] = {
+			label: 'Picture-In-Picture mode',
+			tooltip: 'XXX test',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Mode',
+
+					id: 'mode',
+					default: 0,
+					tooltip: 'Choose mode',
+					choices: [
+						//{ id: 0, label: 'PIP off' },
+					],
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (action, bank) => {
+				this.sendCommandPIPMode(action.options.mode)
+			},
+		}
+		for (let id in PIP_MODES) {
+			actions['pip_mode'].options[0].choices.push({ id: id, label: PIP_MODES[id] })
+		}
 
 		this.setActions(actions)
 	}
 
 	askAboutStatus() {
-		this.sendCommand('<T0000750300000078>')
-		this.sendCommand('<T000078130000008B>')
+		this.sendCommand('<T0000750300000078>') // asking about signal
+		this.sendCommand('<T000078130000008B>') // asking about switch setting
+		this.sendCommand('<T0000751F00000094>') // asking about PIP mode
 	}
 
 	initUDPConnection() {
@@ -239,6 +282,7 @@ class instance extends instance_skel {
 
 			this.checkFeedbacks('set_source')
 			this.checkFeedbacks('set_mode')
+			this.checkFeedbacks('set_pip_mode')
 		}
 	}
 
@@ -264,12 +308,17 @@ class instance extends instance_skel {
 		//console.log('GOT  ' + redeableMsg);
 
 		// Checksum checking
-		let sum = 0
-		for (var i = 4; i <= 14; i += 2) {
-			sum += parseInt(redeableMsg.substr(i, 2), 16)
-		}
-		let msgCheckSum = parseInt(redeableMsg.substr(16, 2), 16)
-		if (sum != msgCheckSum) {
+		let checksumInMessage = redeableMsg.substr(16, 2)
+		let calculatedChecksum = this.calculateChecksum(
+			redeableMsg.substr(2, 2),
+			redeableMsg.substr(4, 2),
+			redeableMsg.substr(6, 2),
+			redeableMsg.substr(8, 2),
+			redeableMsg.substr(10, 2),
+			redeableMsg.substr(12, 2),
+			redeableMsg.substr(14, 2)
+		)
+		if (checksumInMessage != calculatedChecksum) {
 			this.status(this.STATUS_WARNING, 'Incorrect checksum')
 			return false
 		}
@@ -286,6 +335,19 @@ class instance extends instance_skel {
 		// end of validate section
 
 		return redeableMsg
+	}
+
+	calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
+		let sum = 0
+		sum += parseInt(ADDR, PARSE_INT_HEX_MODE)
+		sum += parseInt(SN, PARSE_INT_HEX_MODE)
+		sum += parseInt(CMD, PARSE_INT_HEX_MODE)
+		sum += parseInt(DAT1, PARSE_INT_HEX_MODE)
+		sum += parseInt(DAT2, PARSE_INT_HEX_MODE)
+		sum += parseInt(DAT3, PARSE_INT_HEX_MODE)
+		sum += parseInt(DAT4, PARSE_INT_HEX_MODE)
+		let checksum = sum.toString(PARSE_INT_HEX_MODE).toUpperCase()
+		return checksum
 	}
 
 	parseAndConsumeFeedback(redeableMsg) {
@@ -320,6 +382,15 @@ class instance extends instance_skel {
 					this.deviceStatus.selectedSource = src
 					return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.selectedSource)
 				}
+			} else if (DAT1 == '1E' || DAT1 == '1F') {
+				// Picture-In-Picture mode
+				// 0x1E(Write), 0x1F(Read)
+				let mode = parseInt(DAT3)
+				if (mode >= 0 && mode <= 9) {
+					this.status(this.STATUS_OK)
+					this.deviceStatus.pipMode = mode
+					return this.logFeedback(redeableMsg, 'PIP mode: ' + PIP_MODES[mode])
+				}
 			}
 			// PIP not parsed, maybe in future
 		} else if (CMD == '78') {
@@ -329,11 +400,11 @@ class instance extends instance_skel {
 				if (DAT2 == '00') {
 					this.status(this.STATUS_OK)
 					this.deviceStatus.switchMode = parseInt(DAT2)
-					return this.logFeedback(redeableMsg, 'Mode Auto')
+					return this.logFeedback(redeableMsg, 'Swtich mode Auto')
 				} else if (DAT2 == '01') {
 					this.status(this.STATUS_OK)
 					this.deviceStatus.switchMode = parseInt(DAT2)
-					return this.logFeedback(redeableMsg, 'Mode T-BAR')
+					return this.logFeedback(redeableMsg, 'Swtich mode T-BAR')
 				}
 			}
 			// Switching effect setting - nod parsed, maybe in future
@@ -491,9 +562,53 @@ class instance extends instance_skel {
 				},
 			],
 		})
+		for (var id in PIP_MODES) {
+			presets.push({
+				category: 'PIP mode',
+				bank: {
+					style: 'text',
+					text: 'PIP mode\\n' + PIP_MODES[id],
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				actions: [
+					{
+						action: 'pip_mode',
+						options: {
+							mode: id,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'set_pip_mode',
+						options: {
+							mode: id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
 
 		this.setPresetDefinitions(presets)
 		//console.log('after initPresets');
+	}
+
+	sendCommandPIPMode(mode) {
+		this.buildAndSendCommand('75', '1E' /*Write*/, '00', '0' + mode, '00')
+	}
+
+	buildAndSendCommand(CMD, DAT1, DAT2, DAT3, DAT4) {
+		let ADDR = '00'
+		let SN = '00'
+		let checksum = this.calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
+		let cmd = '<T' + ADDR + SN + CMD + DAT1 + DAT2 + DAT3 + DAT4 + checksum + '>'
+		this.sendCommand(cmd)
 	}
 
 	sendCommand(cmd) {
@@ -536,6 +651,8 @@ class instance extends instance_skel {
 			let ret = feedback.options.mode == this.deviceStatus.switchMode
 			//console.log('feedback:' + feedback.options.mode + ' ' + this.deviceStatus.switchMode + ' ' + ret)
 			return ret
+		} else if (feedback.type == 'set_pip_mode') {
+			return feedback.options.mode == this.deviceStatus.pipMode
 		}
 
 		return false
@@ -591,6 +708,32 @@ class instance extends instance_skel {
 				},
 			],
 		}
+		feedbacks['set_pip_mode'] = {
+			type: 'boolean',
+			label: 'Selected PIP mode',
+			description: 'Picture-In-Picture mode',
+			style: {
+				color: this.rgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'PIP mode',
+					id: 'mode',
+					default: '0',
+					tooltip: 'Choose mode',
+					choices: [
+						//{ id: '1', label: '1' },
+					],
+					minChoicesForSearch: 0,
+				},
+			],
+		}
+		for (let id in PIP_MODES) {
+			feedbacks['set_pip_mode'].options[0].choices.push({ id: id, label: PIP_MODES[id] })
+		}
+
 		this.setFeedbackDefinitions(feedbacks)
 	}
 }
