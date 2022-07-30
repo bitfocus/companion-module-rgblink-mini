@@ -56,7 +56,7 @@ class instance extends instance_skel {
 				type: 'textinput',
 				id: 'host',
 				label: 'IP address of RGBlink mini device',
-				width: 6,
+				width: 12,
 				regex: this.REGEX_IP,
 			},
 			{
@@ -65,6 +65,13 @@ class instance extends instance_skel {
 				width: 12,
 				label: 'Port',
 				value: 'Will be used default port ' + this.config.port,
+			},
+			{
+				type: 'checkbox',
+				label: 'Status polling (ask for status every second)',
+				id: 'polling',
+				width: 12,
+				default: true,
 			},
 		]
 	}
@@ -85,7 +92,9 @@ class instance extends instance_skel {
 		this.initFeedbacks()
 		var self = this
 		this.intervalHandler = setInterval(function () {
-			self.askAboutSignal()
+			if (self.config.polling) {
+				self.askAboutStatus()
+			}
 		}, 1000)
 	}
 
@@ -176,7 +185,7 @@ class instance extends instance_skel {
 		this.setActions(actions)
 	}
 
-	askAboutSignal() {
+	askAboutStatus() {
 		this.sendCommand('<T0000750300000078>')
 		this.sendCommand('<T000078130000008B>')
 	}
@@ -215,7 +224,7 @@ class instance extends instance_skel {
 			})
 
 			this.sendCommand(CONNECT_MSG)
-			this.askAboutSignal()
+			this.askAboutStatus()
 		}
 	}
 
@@ -223,7 +232,6 @@ class instance extends instance_skel {
 		//console.log('RGBlink mini: initUDPConnection data');
 		//console.log(message);
 		//console.log(metadata);
-
 
 		// consume message, if received data are valid
 		let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
@@ -245,7 +253,7 @@ class instance extends instance_skel {
 			return false
 		}
 
-		if (metadata.address != this.config.host || metadata.port != this.config.port) {
+		if (metadata.address != this.config.host) {
 			this.status(
 				this.STATUS_WARNING,
 				'Feedback received from different sender ' + metadata.address + ':' + metadata.port
@@ -279,7 +287,6 @@ class instance extends instance_skel {
 		// end of validate section
 
 		return redeableMsg
-
 	}
 
 	parseAndConsumeFeedback(redeableMsg) {
