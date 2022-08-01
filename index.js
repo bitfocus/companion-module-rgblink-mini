@@ -119,6 +119,41 @@ class instance extends instance_skel {
 		//console.log('RGBlink mini: initActions');
 		let actions = {}
 
+		actions['switch_mode_and_source'] = {
+			label: 'Select source and target',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source number',
+					id: 'sourceNumber',
+					default: '1',
+					tooltip: 'Choose source number, which should be selected',
+					choices: [
+						{ id: '1', label: '1' },
+						{ id: '2', label: '2' },
+						{ id: '3', label: '3' },
+						{ id: '4', label: '4' },
+					],
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Mode',
+					id: 'mode',
+					default: SWITCH_MODE_AUTO,
+					tooltip: 'Choose mode',
+					choices: [
+						{ id: SWITCH_MODE_AUTO, label: 'Auto (Take)' },
+						{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
+					],
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (action, bank) => {
+				//console.log('onAction');
+				this.sendCommand(SWITCH_MODE_MSG[action.options.mode] + SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
+			},
+		}
 		actions['switch_to_source'] = {
 			label: 'Switch to signal source',
 			options: [
@@ -161,41 +196,6 @@ class instance extends instance_skel {
 			callback: (action, bank) => {
 				//console.log('onAction');
 				this.sendCommand(SWITCH_MODE_MSG[action.options.mode])
-			},
-		}
-		actions['switch_mode_and_source'] = {
-			label: 'Select source and target',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'Source number',
-					id: 'sourceNumber',
-					default: '1',
-					tooltip: 'Choose source number, which should be selected',
-					choices: [
-						{ id: '1', label: '1' },
-						{ id: '2', label: '2' },
-						{ id: '3', label: '3' },
-						{ id: '4', label: '4' },
-					],
-					minChoicesForSearch: 0,
-				},
-				{
-					type: 'dropdown',
-					label: 'Mode',
-					id: 'mode',
-					default: SWITCH_MODE_AUTO,
-					tooltip: 'Choose mode',
-					choices: [
-						{ id: SWITCH_MODE_AUTO, label: 'Auto (Take)' },
-						{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
-					],
-					minChoicesForSearch: 0,
-				},
-			],
-			callback: (action, bank) => {
-				//console.log('onAction');
-				this.sendCommand(SWITCH_MODE_MSG[action.options.mode] + SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
 			},
 		}
 		actions['pip_mode'] = {
