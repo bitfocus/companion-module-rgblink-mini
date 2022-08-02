@@ -1,9 +1,15 @@
 /*
 TODO
+* check on configuration update - what happens
 * SN ? Currently always zero
-* switch effect?
 * detect device is disconnected
 * undocummented options (like select pip layer?)
+* switch time setting (from 0.5s to 5s)
+
+usefull commands
+* yarn format
+* yarn headless
+
 */
 
 const udp = require('../../udp')
@@ -40,6 +46,24 @@ const PIP_MODES = {
 	9: 'PBP right',
 }
 
+const SWITCH_EFFECT = {
+	0: 'CUT',
+	1: 'FADE',
+	2: '<-[]->',
+	3: 'L->R',
+	4: 'T->B',
+	5: 'LT->RB',
+	6: '<-+->',
+	7: 'R->L',
+	8: 'B->T',
+	9: 'L<-M->R',
+	0x0a: 'T<-M->B',
+	0x0b: '->+<-',
+	0x0c: '|||->',
+	0x0d: '->[]<-',
+	0x0e: '<-O->',
+}
+
 const PARSE_INT_HEX_MODE = 16
 
 class instance extends instance_skel {
@@ -53,6 +77,7 @@ class instance extends instance_skel {
 		selectedSource: undefined,
 		switchMode: undefined,
 		pipMode: undefined,
+		switchEffect: undefined,
 	}
 
 	constructor(system, id, config) {
@@ -200,12 +225,10 @@ class instance extends instance_skel {
 		}
 		actions['pip_mode'] = {
 			label: 'Picture-In-Picture mode',
-			tooltip: 'XXX test',
 			options: [
 				{
 					type: 'dropdown',
 					label: 'Mode',
-
 					id: 'mode',
 					default: 0,
 					tooltip: 'Choose mode',
@@ -223,6 +246,29 @@ class instance extends instance_skel {
 			actions['pip_mode'].options[0].choices.push({ id: id, label: PIP_MODES[id] })
 		}
 
+		actions['switch_effect'] = {
+			label: 'Switch effect',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Effect',
+					id: 'mode',
+					default: 0,
+					tooltip: 'Choose effect',
+					choices: [
+						//{ id: 0, label: 'PIP off' },
+					],
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (action, bank) => {
+				this.sendCommandSwitchEffect(action.options.mode)
+			},
+		}
+		for (let id in SWITCH_EFFECT) {
+			actions['switch_effect'].options[0].choices.push({ id: id, label: SWITCH_EFFECT[id] })
+		}
+
 		this.setActions(actions)
 	}
 
@@ -230,6 +276,7 @@ class instance extends instance_skel {
 		this.sendCommand('<T0000750300000078>') // asking about signal
 		this.sendCommand('<T000078130000008B>') // asking about switch setting
 		this.sendCommand('<T0000751F00000094>') // asking about PIP mode
+		this.sendCommand('<T000078070000007F>') // asking about switch effect
 	}
 
 	initUDPConnection() {
@@ -283,6 +330,7 @@ class instance extends instance_skel {
 			this.checkFeedbacks('set_source')
 			this.checkFeedbacks('set_mode')
 			this.checkFeedbacks('set_pip_mode')
+			this.checkFeedbacks('set_switch_effect')
 		}
 	}
 
@@ -392,7 +440,6 @@ class instance extends instance_skel {
 					return this.logFeedback(redeableMsg, 'PIP mode: ' + PIP_MODES[mode])
 				}
 			}
-			// PIP not parsed, maybe in future
 		} else if (CMD == '78') {
 			// 0x78 Switching Setting
 			if (DAT1 == '12' || DAT1 == '13') {
@@ -406,8 +453,15 @@ class instance extends instance_skel {
 					this.deviceStatus.switchMode = parseInt(DAT2)
 					return this.logFeedback(redeableMsg, 'Swtich mode T-BAR')
 				}
+			} else if (DAT1 == '06' || DAT1 == '07') {
+				// Switching effect setting
+				let effect = parseInt(DAT2, PARSE_INT_HEX_MODE)
+				if (effect >= 0 && effect <= 0x0e) {
+					this.status(this.STATUS_OK)
+					this.deviceStatus.switchEffect = effect
+					return this.logFeedback(redeableMsg, 'Switch effect: ' + SWITCH_EFFECT[effect])
+				}
 			}
-			// Switching effect setting - nod parsed, maybe in future
 		}
 
 		console.log('Unrecognized feedback message:' + redeableMsg)
@@ -595,12 +649,50 @@ class instance extends instance_skel {
 			})
 		}
 
+		for (var id in SWITCH_EFFECT) {
+			presets.push({
+				category: 'Switch effect',
+				bank: {
+					style: 'text',
+					text: 'Effect\\n' + SWITCH_EFFECT[id],
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				actions: [
+					{
+						action: 'switch_effect',
+						options: {
+							mode: id,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'set_switch_effect',
+						options: {
+							mode: id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+
 		this.setPresetDefinitions(presets)
 		//console.log('after initPresets');
 	}
 
 	sendCommandPIPMode(mode) {
 		this.buildAndSendCommand('75', '1E' /*Write*/, '00', '0' + mode, '00')
+	}
+
+	sendCommandSwitchEffect(effect) {
+		let encoded = '0' + parseInt(effect).toString(PARSE_INT_HEX_MODE).toUpperCase()
+		this.buildAndSendCommand('78', '06' /*Write*/, encoded, '00', '00')
 	}
 
 	buildAndSendCommand(CMD, DAT1, DAT2, DAT3, DAT4) {
@@ -653,6 +745,8 @@ class instance extends instance_skel {
 			return ret
 		} else if (feedback.type == 'set_pip_mode') {
 			return feedback.options.mode == this.deviceStatus.pipMode
+		} else if ((feedback.type = 'set_switch_effect')) {
+			return feedback.options.mode == this.deviceStatus.switchEffect
 		}
 
 		return false
@@ -732,6 +826,32 @@ class instance extends instance_skel {
 		}
 		for (let id in PIP_MODES) {
 			feedbacks['set_pip_mode'].options[0].choices.push({ id: id, label: PIP_MODES[id] })
+		}
+
+		feedbacks['set_switch_effect'] = {
+			type: 'boolean',
+			label: 'Selected switch effect',
+			description: 'Switch effect between sources/streams',
+			style: {
+				color: this.rgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Effect',
+					id: 'mode',
+					default: 0,
+					tooltip: 'Choose effect',
+					choices: [
+						//{ id: 0, label: 'PIP off' },
+					],
+					minChoicesForSearch: 0,
+				},
+			],
+		}
+		for (let id in SWITCH_EFFECT) {
+			feedbacks['set_switch_effect'].options[0].choices.push({ id: id, label: SWITCH_EFFECT[id] })
 		}
 
 		this.setFeedbackDefinitions(feedbacks)
