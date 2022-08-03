@@ -88,6 +88,33 @@ const PARSE_INT_HEX_MODE = 16
 const PIP_LAYER_A = 0
 const PIP_LAYER_B = 1
 
+const SOURCE_CHOICES_PART = [
+	{ id: '1', label: '1' },
+	{ id: '2', label: '2' },
+	{ id: '3', label: '3' },
+	{ id: '4', label: '4' },
+]
+
+const SWITCH_MODE_CHOICES_PART = [
+	{ id: SWITCH_MODE_AUTO, label: 'Quick/Auto (Live output)' },
+	{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
+]
+
+const PIP_MODE_CHOICES_PART = []
+for (let id in PIP_MODES) {
+	PIP_MODE_CHOICES_PART.push({ id: id, label: PIP_MODES[id] })
+}
+
+const PART_CHOICES_SWITCH_EFFECTS = []
+for (let id in SWITCH_EFFECT) {
+	PART_CHOICES_SWITCH_EFFECTS.push({ id: id, label: SWITCH_EFFECT[id] })
+}
+
+const PART_CHOICES_PIP_LAYERS = [
+	{ id: PIP_LAYER_A, label: 'A (main/first)' },
+	{ id: PIP_LAYER_B, label: 'B (additional/second)' },
+]
+
 class instance extends instance_skel {
 	BACKGROUND_COLOR_PREVIEW
 	BACKGROUND_COLOR_ON_AIR
@@ -176,12 +203,7 @@ class instance extends instance_skel {
 					id: 'sourceNumber',
 					default: '1',
 					tooltip: 'Choose source number, which should be selected',
-					choices: [
-						{ id: '1', label: '1' },
-						{ id: '2', label: '2' },
-						{ id: '3', label: '3' },
-						{ id: '4', label: '4' },
-					],
+					choices: SOURCE_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -190,10 +212,7 @@ class instance extends instance_skel {
 					id: 'mode',
 					default: SWITCH_MODE_AUTO,
 					tooltip: 'Choose mode',
-					choices: [
-						{ id: SWITCH_MODE_AUTO, label: 'Auto (Take)' },
-						{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
-					],
+					choices: SWITCH_MODE_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -211,12 +230,7 @@ class instance extends instance_skel {
 					id: 'sourceNumber',
 					default: '1',
 					tooltip: 'Choose source number, which should be selected',
-					choices: [
-						{ id: '1', label: '1' },
-						{ id: '2', label: '2' },
-						{ id: '3', label: '3' },
-						{ id: '4', label: '4' },
-					],
+					choices: SOURCE_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -234,10 +248,7 @@ class instance extends instance_skel {
 					id: 'mode',
 					default: SWITCH_MODE_AUTO,
 					tooltip: 'Choose mode',
-					choices: [
-						{ id: SWITCH_MODE_AUTO, label: 'Auto (Take)' },
-						{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
-					],
+					choices: SWITCH_MODE_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -255,18 +266,13 @@ class instance extends instance_skel {
 					id: 'mode',
 					default: 0,
 					tooltip: 'Choose mode',
-					choices: [
-						//{ id: 0, label: 'PIP off' },
-					],
+					choices: PIP_MODE_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
 			],
 			callback: (action, bank) => {
 				this.sendCommandPIPMode(action.options.mode)
 			},
-		}
-		for (let id in PIP_MODES) {
-			actions['pip_mode'].options[0].choices.push({ id: id, label: PIP_MODES[id] })
 		}
 
 		actions['switch_effect'] = {
@@ -278,18 +284,13 @@ class instance extends instance_skel {
 					id: 'mode',
 					default: 0,
 					tooltip: 'Choose effect',
-					choices: [
-						//{ id: 0, label: 'PIP off' },
-					],
+					choices: PART_CHOICES_SWITCH_EFFECTS,
 					minChoicesForSearch: 0,
 				},
 			],
 			callback: (action, bank) => {
 				this.sendCommandSwitchEffect(action.options.mode)
 			},
-		}
-		for (let id in SWITCH_EFFECT) {
-			actions['switch_effect'].options[0].choices.push({ id: id, label: SWITCH_EFFECT[id] })
 		}
 
 		actions['pip_layer'] = {
@@ -301,10 +302,7 @@ class instance extends instance_skel {
 					id: 'layer',
 					default: PIP_LAYER_A,
 					tooltip: 'Choose layer',
-					choices: [
-						{ id: PIP_LAYER_A, label: 'A (main/first)' },
-						{ id: PIP_LAYER_B, label: 'B (additional/second)' },
-					],
+					choices: PART_CHOICES_PIP_LAYERS,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -627,12 +625,7 @@ class instance extends instance_skel {
 					id: 'sourceNumber',
 					default: '1',
 					tooltip: 'Choose source number',
-					choices: [
-						{ id: '1', label: '1' },
-						{ id: '2', label: '2' },
-						{ id: '3', label: '3' },
-						{ id: '4', label: '4' },
-					],
+					choices: SOURCE_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -652,10 +645,7 @@ class instance extends instance_skel {
 					id: 'mode',
 					default: SWITCH_MODE_AUTO,
 					tooltip: 'Choose mode',
-					choices: [
-						{ id: SWITCH_MODE_AUTO, label: 'Auto (Take)' },
-						{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
-					],
+					choices: SWITCH_MODE_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -675,15 +665,10 @@ class instance extends instance_skel {
 					id: 'mode',
 					default: '0',
 					tooltip: 'Choose mode',
-					choices: [
-						//{ id: '1', label: '1' },
-					],
+					choices: PIP_MODE_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
 			],
-		}
-		for (let id in PIP_MODES) {
-			feedbacks['set_pip_mode'].options[0].choices.push({ id: id, label: PIP_MODES[id] })
 		}
 
 		feedbacks['set_pip_layer'] = {
@@ -701,10 +686,7 @@ class instance extends instance_skel {
 					id: 'layer',
 					default: SWITCH_MODE_AUTO,
 					tooltip: 'Choose mode',
-					choices: [
-						{ id: PIP_LAYER_A, label: 'A (main/first)' },
-						{ id: PIP_LAYER_B, label: 'B (additional/second)' },
-					],
+					choices: PART_CHOICES_PIP_LAYERS,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -724,15 +706,10 @@ class instance extends instance_skel {
 					id: 'mode',
 					default: 0,
 					tooltip: 'Choose effect',
-					choices: [
-						//{ id: 0, label: 'PIP off' },
-					],
+					choices: PART_CHOICES_SWITCH_EFFECTS,
 					minChoicesForSearch: 0,
 				},
 			],
-		}
-		for (let id in SWITCH_EFFECT) {
-			feedbacks['set_switch_effect'].options[0].choices.push({ id: id, label: SWITCH_EFFECT[id] })
 		}
 
 		this.setFeedbackDefinitions(feedbacks)
@@ -1047,7 +1024,6 @@ class instance extends instance_skel {
 		this.setPresetDefinitions(presets)
 		//console.log('after initPresets');
 	}
-
 }
 
 exports = module.exports = instance
