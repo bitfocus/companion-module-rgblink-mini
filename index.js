@@ -221,6 +221,55 @@ class instance extends instance_skel {
 				this.sendCommand(SWITCH_MODE_MSG[action.options.mode] + SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
 			},
 		}
+		actions['build_pip_sources_and_target'] = {
+			label: 'Build PIP from selected sources',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Mode - where pip will be visible',
+					tooltip: 'Choose mode',
+					id: 'mode',
+					default: SWITCH_MODE_AUTO,
+					choices: SWITCH_MODE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'PIP mode',
+					id: 'pipMode',
+					default: 0,
+					tooltip: 'Choose mode',
+					choices: PIP_MODE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source for layer A (main/first)',
+					id: 'sourceNumberA',
+					default: '1',
+					tooltip: 'Choose source number',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source for layer B (additional/second)',
+					id: 'sourceNumberB',
+					default: '2',
+					tooltip: 'Choose source number',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (action, bank) => {
+				this.sendCommandBuildPip(
+					action.options.mode,
+					action.options.pipMode,
+					action.options.sourceNumberA,
+					action.options.sourceNumberB
+				)
+			},
+		}
 		actions['switch_to_source'] = {
 			label: 'Switch to signal source',
 			options: [
@@ -549,6 +598,24 @@ class instance extends instance_skel {
 		this.buildAndSendCommand('75', '1A' /*Write*/, '00', layerCode, '00')
 	}
 
+	sendCommandBuildPip(mode /*T-BAR - preview / Auto - live output */, pipMode, sourceOnLayerA, sourceOnLayerB) {
+		if (mode == SWITCH_MODE_AUTO || mode == SWITCH_MODE_TBAR) {
+			this.sendCommand(SWITCH_MODE_MSG[mode])
+		} else {
+			this.status(this.STATUS_WARNING, 'Bad mode')
+			return
+		}
+		this.sendCommandPIPMode(pipMode)
+		if (sourceOnLayerA >= 0 && sourceOnLayerA <= 3) {
+			this.sendCommandSwitchPipLayer(PIP_LAYER_A)
+			this.sendCommand(SWITCH_TO_SOURCE_MSG[sourceOnLayerA])
+		}
+		if (sourceOnLayerB >= 0 && sourceOnLayerB <= 3) {
+			this.sendCommandSwitchPipLayer(PIP_LAYER_B)
+			this.sendCommand(SWITCH_TO_SOURCE_MSG[sourceOnLayerB])
+		}
+	}
+
 	buildAndSendCommand(CMD, DAT1, DAT2, DAT3, DAT4) {
 		let ADDR = '00'
 		let SN = '00'
@@ -804,6 +871,165 @@ class instance extends instance_skel {
 				],
 			})
 		}
+
+		presets.push({
+			category: 'PIP examples',
+			bank: {
+				style: 'text',
+				text: 'PIP center\\nPreview\\nSrc 1 + 2',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'build_pip_sources_and_target',
+					options: {
+						mode: SWITCH_MODE_TBAR,
+						pipMode: 1,
+						sourceNumberA: 1,
+						sourceNumberB: 2,
+					},
+				},
+			],
+		})
+		presets.push({
+			category: 'PIP examples',
+			bank: {
+				style: 'text',
+				text: 'PIP left top\\nPreview\\nSrc 1 + 2',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'build_pip_sources_and_target',
+					options: {
+						mode: SWITCH_MODE_TBAR,
+						pipMode: 2,
+						sourceNumberA: 1,
+						sourceNumberB: 2,
+					},
+				},
+			],
+		})
+		presets.push({
+			category: 'PIP examples',
+			bank: {
+				style: 'text',
+				text: 'PIP right top\\nLive output\\nSrc 1 + 2',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'build_pip_sources_and_target',
+					options: {
+						mode: SWITCH_MODE_AUTO,
+						pipMode: 3,
+						sourceNumberA: 1,
+						sourceNumberB: 2,
+					},
+				},
+			],
+		})
+
+		for (var id in PIP_MODES) {
+			presets.push({
+				category: 'PIP mode',
+				bank: {
+					style: 'text',
+					text: 'PIP mode\\n' + PIP_MODES[id],
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				actions: [
+					{
+						action: 'pip_mode',
+						options: {
+							mode: id,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'set_pip_mode',
+						options: {
+							mode: id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+
+		presets.push({
+			category: 'PIP layer',
+			bank: {
+				style: 'text',
+				text: 'PIP layer\\nA',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'pip_layer',
+					options: {
+						layer: PIP_LAYER_A,
+					},
+				},
+			],
+			feedbacks: [
+				{
+					type: 'set_pip_layer',
+					options: {
+						layer: PIP_LAYER_A,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+					},
+				},
+			],
+		})
+		presets.push({
+			category: 'PIP layer',
+			bank: {
+				style: 'text',
+				text: 'PIP layer\\nB',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'pip_layer',
+					options: {
+						layer: PIP_LAYER_B,
+					},
+				},
+			],
+			feedbacks: [
+				{
+					type: 'set_pip_layer',
+					options: {
+						layer: PIP_LAYER_B,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+					},
+				},
+			],
+		})
+
 		presets.push({
 			category: 'Select switch mode (Auto / T-BAR)',
 			bank: {
@@ -926,100 +1152,6 @@ class instance extends instance_skel {
 			})
 		}
 		presets.push(showEffectPreset)
-
-		for (var id in PIP_MODES) {
-			presets.push({
-				category: 'PIP mode',
-				bank: {
-					style: 'text',
-					text: 'PIP mode\\n' + PIP_MODES[id],
-					size: 'auto',
-					color: this.TEXT_COLOR,
-					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-				},
-				actions: [
-					{
-						action: 'pip_mode',
-						options: {
-							mode: id,
-						},
-					},
-				],
-				feedbacks: [
-					{
-						type: 'set_pip_mode',
-						options: {
-							mode: id,
-						},
-						style: {
-							color: this.TEXT_COLOR,
-							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-						},
-					},
-				],
-			})
-		}
-
-		presets.push({
-			category: 'PIP layer',
-			bank: {
-				style: 'text',
-				text: 'PIP layer\\nA',
-				size: 'auto',
-				color: this.TEXT_COLOR,
-				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-			},
-			actions: [
-				{
-					action: 'pip_layer',
-					options: {
-						layer: PIP_LAYER_A,
-					},
-				},
-			],
-			feedbacks: [
-				{
-					type: 'set_pip_layer',
-					options: {
-						layer: PIP_LAYER_A,
-					},
-					style: {
-						color: this.TEXT_COLOR,
-						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-					},
-				},
-			],
-		})
-		presets.push({
-			category: 'PIP layer',
-			bank: {
-				style: 'text',
-				text: 'PIP layer\\nB',
-				size: 'auto',
-				color: this.TEXT_COLOR,
-				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-			},
-			actions: [
-				{
-					action: 'pip_layer',
-					options: {
-						layer: PIP_LAYER_B,
-					},
-				},
-			],
-			feedbacks: [
-				{
-					type: 'set_pip_layer',
-					options: {
-						layer: PIP_LAYER_B,
-					},
-					style: {
-						color: this.TEXT_COLOR,
-						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-					},
-				},
-			],
-		})
 
 		this.setPresetDefinitions(presets)
 		//console.log('after initPresets');
