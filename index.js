@@ -525,315 +525,6 @@ class instance extends instance_skel {
 		console.log('Unrecognized feedback message:' + redeableMsg)
 	}
 
-	initPresets() {
-		//console.log('initPresets');
-		let presets = []
-		for (var i = 1; i <= 4; i++) {
-			presets.push({
-				category: 'Select source on live output',
-				bank: {
-					style: 'text',
-					text: 'Live source\\n' + i,
-					size: 'auto',
-					color: this.TEXT_COLOR,
-					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-				},
-				actions: [
-					{
-						action: 'switch_mode_and_source',
-						options: {
-							sourceNumber: i,
-							mode: SWITCH_MODE_AUTO,
-						},
-					},
-				],
-				feedbacks: [
-					{
-						type: 'set_source',
-						options: {
-							sourceNumber: i,
-						},
-						style: {
-							color: this.TEXT_COLOR,
-							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-						},
-					},
-				],
-			})
-		}
-		for (var i = 1; i <= 4; i++) {
-			presets.push({
-				category: 'Select source on preview',
-				bank: {
-					style: 'text',
-					text: 'Preview source\\n' + i,
-					size: 'auto',
-					color: this.TEXT_COLOR,
-					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-				},
-				actions: [
-					{
-						action: 'switch_mode_and_source',
-						options: {
-							sourceNumber: i,
-							mode: SWITCH_MODE_TBAR,
-						},
-					},
-				],
-			})
-		}
-		for (var i = 1; i <= 4; i++) {
-			presets.push({
-				category: 'Select source',
-				bank: {
-					style: 'text',
-					text: 'Source\\n' + i,
-					size: 'auto',
-					color: this.TEXT_COLOR,
-					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-				},
-				actions: [
-					{
-						action: 'switch_to_source',
-						options: {
-							sourceNumber: i,
-						},
-					},
-				],
-				feedbacks: [
-					{
-						type: 'set_source',
-						options: {
-							sourceNumber: i,
-						},
-						style: {
-							color: this.TEXT_COLOR,
-							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-						},
-					},
-				],
-			})
-		}
-		presets.push({
-			category: 'Select switch mode (Auto / T-BAR)',
-			bank: {
-				style: 'text',
-				text: 'Switch mode\\nAuto',
-				size: 'auto',
-				color: this.TEXT_COLOR,
-				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-			},
-			actions: [
-				{
-					action: 'switch_mode',
-					options: {
-						mode: SWITCH_MODE_AUTO,
-					},
-				},
-			],
-			feedbacks: [
-				{
-					type: 'set_mode',
-					options: {
-						mode: SWITCH_MODE_AUTO,
-					},
-					style: {
-						color: this.TEXT_COLOR,
-						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-					},
-				},
-			],
-		})
-		presets.push({
-			category: 'Select switch mode (Auto / T-BAR)',
-			bank: {
-				style: 'text',
-				text: 'Switch mode\\nT-BAR',
-				size: 'auto',
-				color: this.TEXT_COLOR,
-				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-			},
-			actions: [
-				{
-					action: 'switch_mode',
-					options: {
-						mode: SWITCH_MODE_TBAR,
-					},
-				},
-			],
-			feedbacks: [
-				{
-					type: 'set_mode',
-					options: {
-						mode: SWITCH_MODE_TBAR,
-					},
-					style: {
-						color: this.TEXT_COLOR,
-						bgcolor: this.BACKGROUND_COLOR_PREVIEW,
-					},
-				},
-			],
-		})
-		for (var id in PIP_MODES) {
-			presets.push({
-				category: 'PIP mode',
-				bank: {
-					style: 'text',
-					text: 'PIP mode\\n' + PIP_MODES[id],
-					size: 'auto',
-					color: this.TEXT_COLOR,
-					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-				},
-				actions: [
-					{
-						action: 'pip_mode',
-						options: {
-							mode: id,
-						},
-					},
-				],
-				feedbacks: [
-					{
-						type: 'set_pip_mode',
-						options: {
-							mode: id,
-						},
-						style: {
-							color: this.TEXT_COLOR,
-							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-						},
-					},
-				],
-			})
-		}
-
-		for (var id in SWITCH_EFFECT) {
-			presets.push({
-				category: 'Switch effect',
-				bank: {
-					style: 'png',
-					size: 'auto',
-					color: this.TEXT_COLOR,
-					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-					png64: SWITCH_EFFECT_ICONS[id],
-					pngalignment: 'center:center',
-				},
-				actions: [
-					{
-						action: 'switch_effect',
-						options: {
-							mode: id,
-						},
-					},
-				],
-				feedbacks: [
-					{
-						type: 'set_switch_effect',
-						options: {
-							mode: id,
-						},
-						style: {
-							color: this.TEXT_COLOR,
-							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-						},
-					},
-				],
-			})
-		}
-
-		let showEffectPreset = {
-			category: 'Switch effect',
-			bank: {
-				style: 'png',
-				text: 'autodetect effect',
-				size: 'auto',
-				color: this.TEXT_COLOR,
-				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-			},
-			feedbacks: [],
-		}
-		for (var id in SWITCH_EFFECT) {
-			showEffectPreset.feedbacks.push({
-				type: 'set_switch_effect',
-				options: {
-					mode: id,
-				},
-				style: {
-					color: this.TEXT_COLOR,
-					bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-					png64: SWITCH_EFFECT_ICONS[id],
-					pngalignment: 'center:center',
-					text: '',
-				},
-			})
-		}
-		presets.push(showEffectPreset)
-
-		presets.push({
-			category: 'PIP layer',
-			bank: {
-				style: 'text',
-				text: 'PIP layer\\nA',
-				size: 'auto',
-				color: this.TEXT_COLOR,
-				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-			},
-			actions: [
-				{
-					action: 'pip_layer',
-					options: {
-						layer: PIP_LAYER_A,
-					},
-				},
-			],
-			feedbacks: [
-				{
-					type: 'set_pip_layer',
-					options: {
-						layer: PIP_LAYER_A,
-					},
-					style: {
-						color: this.TEXT_COLOR,
-						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-					},
-				},
-			],
-		})
-		presets.push({
-			category: 'PIP layer',
-			bank: {
-				style: 'text',
-				text: 'PIP layer\\nB',
-				size: 'auto',
-				color: this.TEXT_COLOR,
-				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
-			},
-			actions: [
-				{
-					action: 'pip_layer',
-					options: {
-						layer: PIP_LAYER_B,
-					},
-				},
-			],
-			feedbacks: [
-				{
-					type: 'set_pip_layer',
-					options: {
-						layer: PIP_LAYER_B,
-					},
-					style: {
-						color: this.TEXT_COLOR,
-						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
-					},
-				},
-			],
-		})
-
-		this.setPresetDefinitions(presets)
-		//console.log('after initPresets');
-	}
-
 	sendCommandPIPMode(mode) {
 		this.buildAndSendCommand('75', '1E' /*Write*/, '00', '0' + mode, '00')
 	}
@@ -1046,6 +737,317 @@ class instance extends instance_skel {
 
 		this.setFeedbackDefinitions(feedbacks)
 	}
+
+	initPresets() {
+		//console.log('initPresets');
+		let presets = []
+		for (var i = 1; i <= 4; i++) {
+			presets.push({
+				category: 'Select source on live output',
+				bank: {
+					style: 'text',
+					text: 'Live source\\n' + i,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				actions: [
+					{
+						action: 'switch_mode_and_source',
+						options: {
+							sourceNumber: i,
+							mode: SWITCH_MODE_AUTO,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'set_source',
+						options: {
+							sourceNumber: i,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+		for (var i = 1; i <= 4; i++) {
+			presets.push({
+				category: 'Select source on preview',
+				bank: {
+					style: 'text',
+					text: 'Preview source\\n' + i,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				actions: [
+					{
+						action: 'switch_mode_and_source',
+						options: {
+							sourceNumber: i,
+							mode: SWITCH_MODE_TBAR,
+						},
+					},
+				],
+			})
+		}
+		for (var i = 1; i <= 4; i++) {
+			presets.push({
+				category: 'Select source',
+				bank: {
+					style: 'text',
+					text: 'Source\\n' + i,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				actions: [
+					{
+						action: 'switch_to_source',
+						options: {
+							sourceNumber: i,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'set_source',
+						options: {
+							sourceNumber: i,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+		presets.push({
+			category: 'Select switch mode (Auto / T-BAR)',
+			bank: {
+				style: 'text',
+				text: 'Switch mode\\nAuto',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'switch_mode',
+					options: {
+						mode: SWITCH_MODE_AUTO,
+					},
+				},
+			],
+			feedbacks: [
+				{
+					type: 'set_mode',
+					options: {
+						mode: SWITCH_MODE_AUTO,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+					},
+				},
+			],
+		})
+		presets.push({
+			category: 'Select switch mode (Auto / T-BAR)',
+			bank: {
+				style: 'text',
+				text: 'Switch mode\\nT-BAR',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'switch_mode',
+					options: {
+						mode: SWITCH_MODE_TBAR,
+					},
+				},
+			],
+			feedbacks: [
+				{
+					type: 'set_mode',
+					options: {
+						mode: SWITCH_MODE_TBAR,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_PREVIEW,
+					},
+				},
+			],
+		})
+
+		for (var id in SWITCH_EFFECT) {
+			presets.push({
+				category: 'Switch effect',
+				bank: {
+					style: 'png',
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+					png64: SWITCH_EFFECT_ICONS[id],
+					pngalignment: 'center:center',
+				},
+				actions: [
+					{
+						action: 'switch_effect',
+						options: {
+							mode: id,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'set_switch_effect',
+						options: {
+							mode: id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+
+		let showEffectPreset = {
+			category: 'Switch effect',
+			bank: {
+				style: 'png',
+				text: 'autodetect effect',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			feedbacks: [],
+		}
+		for (var id in SWITCH_EFFECT) {
+			showEffectPreset.feedbacks.push({
+				type: 'set_switch_effect',
+				options: {
+					mode: id,
+				},
+				style: {
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+					png64: SWITCH_EFFECT_ICONS[id],
+					pngalignment: 'center:center',
+					text: '',
+				},
+			})
+		}
+		presets.push(showEffectPreset)
+
+		for (var id in PIP_MODES) {
+			presets.push({
+				category: 'PIP mode',
+				bank: {
+					style: 'text',
+					text: 'PIP mode\\n' + PIP_MODES[id],
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				actions: [
+					{
+						action: 'pip_mode',
+						options: {
+							mode: id,
+						},
+					},
+				],
+				feedbacks: [
+					{
+						type: 'set_pip_mode',
+						options: {
+							mode: id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+
+		presets.push({
+			category: 'PIP layer',
+			bank: {
+				style: 'text',
+				text: 'PIP layer\\nA',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'pip_layer',
+					options: {
+						layer: PIP_LAYER_A,
+					},
+				},
+			],
+			feedbacks: [
+				{
+					type: 'set_pip_layer',
+					options: {
+						layer: PIP_LAYER_A,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+					},
+				},
+			],
+		})
+		presets.push({
+			category: 'PIP layer',
+			bank: {
+				style: 'text',
+				text: 'PIP layer\\nB',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'pip_layer',
+					options: {
+						layer: PIP_LAYER_B,
+					},
+				},
+			],
+			feedbacks: [
+				{
+					type: 'set_pip_layer',
+					options: {
+						layer: PIP_LAYER_B,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+					},
+				},
+			],
+		})
+
+		this.setPresetDefinitions(presets)
+		//console.log('after initPresets');
+	}
+
 }
 
 exports = module.exports = instance
