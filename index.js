@@ -85,6 +85,9 @@ const SWITCH_EFFECT_ICONS = {
 
 const PARSE_INT_HEX_MODE = 16
 
+const PIP_LAYER_A = 0
+const PIP_LAYER_B = 1
+
 class instance extends instance_skel {
 	BACKGROUND_COLOR_PREVIEW
 	BACKGROUND_COLOR_ON_AIR
@@ -95,8 +98,9 @@ class instance extends instance_skel {
 	deviceStatus = {
 		selectedSource: undefined,
 		switchMode: undefined,
-		pipMode: undefined,
 		switchEffect: undefined,
+		pipMode: undefined,
+		pipLayer: undefined,
 	}
 
 	constructor(system, id, config) {
@@ -288,6 +292,28 @@ class instance extends instance_skel {
 			actions['switch_effect'].options[0].choices.push({ id: id, label: SWITCH_EFFECT[id] })
 		}
 
+		actions['pip_layer'] = {
+			label: 'PIP layer (A or B)',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Layer',
+					id: 'layer',
+					default: PIP_LAYER_A,
+					tooltip: 'Choose layer',
+					choices: [
+						{ id: PIP_LAYER_A, label: 'A (main/first)' },
+						{ id: PIP_LAYER_B, label: 'B (additional/second)' },
+					],
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (action, bank) => {
+				//console.log('onAction');
+				this.sendCommandSwitchPipLayer(action.options.layer)
+			},
+		}
+
 		this.setActions(actions)
 	}
 
@@ -296,6 +322,7 @@ class instance extends instance_skel {
 		this.sendCommand('<T000078130000008B>') // asking about switch setting
 		this.sendCommand('<T0000751F00000094>') // asking about PIP mode
 		this.sendCommand('<T000078070000007F>') // asking about switch effect
+		this.sendCommand('<T0000751B00000090>') // asking about PIP layer (A or B)
 	}
 
 	initUDPConnection() {
@@ -349,6 +376,7 @@ class instance extends instance_skel {
 			this.checkFeedbacks('set_source')
 			this.checkFeedbacks('set_mode')
 			this.checkFeedbacks('set_pip_mode')
+			this.checkFeedbacks('set_pip_layer')
 			this.checkFeedbacks('set_switch_effect')
 		}
 	}
@@ -448,6 +476,17 @@ class instance extends instance_skel {
 					this.status(this.STATUS_OK)
 					this.deviceStatus.selectedSource = src
 					return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.selectedSource)
+				}
+			} else if (DAT1 == '1A' || DAT1 == '1B') {
+				// T0000751B00000090 PIP layer (A or B)
+				if (DAT3 == '00') {
+					this.status(this.STATUS_OK)
+					this.deviceStatus.pipLayer = PIP_LAYER_A
+					return this.logFeedback(redeableMsg, 'PIP Layer A')
+				} else if (DAT3 == '01') {
+					this.status(this.STATUS_OK)
+					this.deviceStatus.pipLayer = PIP_LAYER_B
+					return this.logFeedback(redeableMsg, 'PIP Layer B')
 				}
 			} else if (DAT1 == '1E' || DAT1 == '1F') {
 				// Picture-In-Picture mode
@@ -730,6 +769,67 @@ class instance extends instance_skel {
 		}
 		presets.push(showEffectPreset)
 
+		presets.push({
+			category: 'PIP layer',
+			bank: {
+				style: 'text',
+				text: 'PIP layer\\nA',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'pip_layer',
+					options: {
+						layer: PIP_LAYER_A,
+					},
+				},
+			],
+			feedbacks: [
+				{
+					type: 'set_pip_layer',
+					options: {
+						layer: PIP_LAYER_A,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+					},
+				},
+			],
+		})
+		presets.push({
+			category: 'PIP layer',
+			bank: {
+				style: 'text',
+				text: 'PIP layer\\nB',
+				size: 'auto',
+				color: this.TEXT_COLOR,
+				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+			},
+			actions: [
+				{
+					action: 'pip_layer',
+					options: {
+						layer: PIP_LAYER_B,
+					},
+				},
+			],
+			feedbacks: [
+				{
+					type: 'set_pip_layer',
+					options: {
+						layer: PIP_LAYER_B,
+					},
+					style: {
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+					},
+				},
+			],
+		})
+
 		this.setPresetDefinitions(presets)
 		//console.log('after initPresets');
 	}
@@ -741,6 +841,23 @@ class instance extends instance_skel {
 	sendCommandSwitchEffect(effect) {
 		let encoded = '0' + parseInt(effect).toString(PARSE_INT_HEX_MODE).toUpperCase()
 		this.buildAndSendCommand('78', '06' /*Write*/, encoded, '00', '00')
+	}
+
+	sendCommandSwitchPipLayer(layer) {
+		// 0 - layer A
+		// 1 - layer B
+		// example layer A <T00f3751a00000082>
+		// example lyaer B <T0046751a000100d6>
+		let layerCode
+		if (layer == PIP_LAYER_A) {
+			layerCode = '00'
+		} else if (layer == PIP_LAYER_B) {
+			layerCode = '01'
+		} else {
+			this.status(this.STATUS_WARNING, 'Bad layer id')
+			return
+		}
+		this.buildAndSendCommand('75', '1A' /*Write*/, '00', layerCode, '00')
 	}
 
 	buildAndSendCommand(CMD, DAT1, DAT2, DAT3, DAT4) {
@@ -793,8 +910,10 @@ class instance extends instance_skel {
 			return ret
 		} else if (feedback.type == 'set_pip_mode') {
 			return feedback.options.mode == this.deviceStatus.pipMode
-		} else if ((feedback.type = 'set_switch_effect')) {
+		} else if (feedback.type == 'set_switch_effect') {
 			return feedback.options.mode == this.deviceStatus.switchEffect
+		} else if (feedback.type == 'set_pip_layer') {
+			return feedback.options.layer == this.deviceStatus.pipLayer
 		}
 
 		return false
@@ -876,6 +995,29 @@ class instance extends instance_skel {
 			feedbacks['set_pip_mode'].options[0].choices.push({ id: id, label: PIP_MODES[id] })
 		}
 
+		feedbacks['set_pip_layer'] = {
+			type: 'boolean',
+			label: 'Selected PIP layer',
+			description: 'PIP layer (A or B)',
+			style: {
+				color: this.rgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Layer',
+					id: 'layer',
+					default: SWITCH_MODE_AUTO,
+					tooltip: 'Choose mode',
+					choices: [
+						{ id: PIP_LAYER_A, label: 'A (main/first)' },
+						{ id: PIP_LAYER_B, label: 'B (additional/second)' },
+					],
+					minChoicesForSearch: 0,
+				},
+			],
+		}
 		feedbacks['set_switch_effect'] = {
 			type: 'boolean',
 			label: 'Selected switch effect',
