@@ -1,10 +1,9 @@
 /*
-TODO
+maybe do it in future:
 * switch effect - better png, with transparency
 * check on configuration update - what happens
 * SN ? Currently always zero
 * detect device is disconnected
-* undocummented options (like select pip layer?)
 * switch time setting (from 0.5s to 5s)
 
 usefull commands
