@@ -135,13 +135,13 @@ class instance extends instance_skel {
 		this.BACKGROUND_COLOR_ON_AIR = this.rgb(255, 0, 0)
 		this.BACKGROUND_COLOR_DEFAULT = this.rgb(0, 0, 0)
 		this.TEXT_COLOR = this.rgb(255, 255, 255)
-		//console.log('RGBlink mini: constructor');
+		//this.debug('RGBlink mini: constructor');
 		this.initActions()
 		this.initPresets()
 	}
 
 	config_fields() {
-		//console.log('RGBlink mini: config_fields');
+		//this.debug('RGBlink mini: config_fields');
 		return [
 			{
 				type: 'textinput',
@@ -168,7 +168,7 @@ class instance extends instance_skel {
 	}
 
 	destroy() {
-		//console.log('RGBlink mini: destroy');
+		//this.debug('RGBlink mini: destroy');
 		this.sendCommand(DISCONNECT_MSG)
 		if (this.socket !== undefined) {
 			this.socket.destroy()
@@ -178,7 +178,7 @@ class instance extends instance_skel {
 	}
 
 	init() {
-		//console.log('RGBlink mini: init');
+		//this.debug('RGBlink mini: init');
 		this.initUDPConnection()
 		this.initFeedbacks()
 		var self = this
@@ -190,7 +190,7 @@ class instance extends instance_skel {
 	}
 
 	initActions() {
-		//console.log('RGBlink mini: initActions');
+		//this.debug('RGBlink mini: initActions');
 		let actions = {}
 
 		actions['switch_mode_and_source'] = {
@@ -216,7 +216,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action, bank) => {
-				//console.log('onAction');
+				//this.debug('onAction');
 				this.sendCommand(SWITCH_MODE_MSG[action.options.mode] + SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
 			},
 		}
@@ -283,7 +283,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action, bank) => {
-				//console.log('onAction');
+				//this.debug('onAction');
 				this.sendCommand(SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
 			},
 		}
@@ -301,7 +301,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action, bank) => {
-				//console.log('onAction');
+				//this.debug('onAction');
 				this.sendCommand(SWITCH_MODE_MSG[action.options.mode])
 			},
 		}
@@ -355,7 +355,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action, bank) => {
-				//console.log('onAction');
+				//this.debug('onAction');
 				this.sendCommandSwitchPipLayer(action.options.layer)
 			},
 		}
@@ -372,9 +372,9 @@ class instance extends instance_skel {
 	}
 
 	initUDPConnection() {
-		//console.log('RGBlink mini: initUDPConnection');
-		//console.log(this.socket);
-		//console.log(this.config);
+		//this.debug('RGBlink mini: initUDPConnection');
+		//this.debug(this.socket);
+		//this.debug(this.config);
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 			delete this.socket
@@ -387,15 +387,15 @@ class instance extends instance_skel {
 		this.status(this.STATUS_WARNING, 'Connecting')
 
 		if (this.config.host) {
-			//console.log('RGBlink mini: initializing....');
+			//this.debug('RGBlink mini: initializing....');
 			this.socket = new udp(this.config.host, this.config.port)
-			//console.log(this.socket);
+			//this.debug(this.socket);
 			this.socket.on('status_change', (status, message) => {
-				//console.log('RGBlink mini: initUDPConnection status_change:' + status + ' ' + message);
+				//this.debug('RGBlink mini: initUDPConnection status_change:' + status + ' ' + message);
 			})
 
 			this.socket.on('error', (err) => {
-				console.log('RGBlink mini: initUDPConnection error')
+				this.debug('RGBlink mini: initUDPConnection error')
 				this.debug('Network error', err)
 				this.log('error', 'Network error: ' + err.message)
 			})
@@ -410,9 +410,9 @@ class instance extends instance_skel {
 	}
 
 	onDataReceivedFromDevice(message, metadata) {
-		//console.log('RGBlink mini: initUDPConnection data');
-		//console.log(message);
-		//console.log(metadata);
+		//this.debug('RGBlink mini: initUDPConnection data');
+		//this.debug(message);
+		//this.debug(metadata);
 
 		// consume message, if received data are valid
 		let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
@@ -428,7 +428,7 @@ class instance extends instance_skel {
 	}
 
 	logFeedback(redeableMsg, info) {
-		console.log('Feedback:' + redeableMsg + ' ' + info)
+		this.debug('Feedback:' + redeableMsg + ' ' + info)
 	}
 
 	validateReceivedDataAndTranslateMessage(message, metadata) {
@@ -446,7 +446,7 @@ class instance extends instance_skel {
 		}
 
 		let redeableMsg = message.toString('utf8').toUpperCase()
-		//console.log('GOT  ' + redeableMsg);
+		//this.debug('GOT  ' + redeableMsg);
 
 		// Checksum checking
 		let checksumInMessage = redeableMsg.substr(16, 2)
@@ -568,7 +568,7 @@ class instance extends instance_skel {
 			}
 		}
 
-		console.log('Unrecognized feedback message:' + redeableMsg)
+		this.debug('Unrecognized feedback message:' + redeableMsg)
 	}
 
 	sendCommandPIPMode(mode) {
@@ -624,19 +624,19 @@ class instance extends instance_skel {
 	}
 
 	sendCommand(cmd) {
-		//console.log('RGBlink mini: sendCommand');
-		//console.log(this.socket.connected);
+		//this.debug('RGBlink mini: sendCommand');
+		//this.debug(this.socket.connected);
 		if (cmd !== undefined && cmd != '') {
 			if (this.socket !== undefined /*&& this.socket.connected*/) {
 				this.socket.send(cmd)
-				console.log('SENT ' + cmd)
-				//console.log(this.socket);
+				this.debug('SENT ' + cmd)
+				//this.debug(this.socket);
 			}
 		}
 	}
 
 	updateConfig(config) {
-		//console.log('RGBlink mini: updateConfig');
+		//this.debug('RGBlink mini: updateConfig');
 		let resetConnection = false
 
 		if (this.config.host != config.host) {
@@ -651,17 +651,17 @@ class instance extends instance_skel {
 	}
 
 	feedback(feedback, bank) {
-		//console.log('RGBlink mini: feedback:' + feedback + " bank:" + bank);
-		//console.log(feedback)
+		//this.debug('RGBlink mini: feedback:' + feedback + " bank:" + bank);
+		//this.debug(feedback)
 
 		if (feedback.type == 'set_source') {
-			//console.log(feedback.options.sourceNumber + ' ' + this.deviceStatus.selectedSource)
+			//this.debug(feedback.options.sourceNumber + ' ' + this.deviceStatus.selectedSource)
 			let ret = feedback.options.sourceNumber == this.deviceStatus.selectedSource
-			//console.log(ret);
+			//this.debug(ret);
 			return ret
 		} else if (feedback.type == 'set_mode') {
 			let ret = feedback.options.mode == this.deviceStatus.switchMode
-			//console.log('feedback:' + feedback.options.mode + ' ' + this.deviceStatus.switchMode + ' ' + ret)
+			//this.debug('feedback:' + feedback.options.mode + ' ' + this.deviceStatus.switchMode + ' ' + ret)
 			return ret
 		} else if (feedback.type == 'set_pip_mode') {
 			return feedback.options.mode == this.deviceStatus.pipMode
@@ -782,7 +782,7 @@ class instance extends instance_skel {
 	}
 
 	initPresets() {
-		//console.log('initPresets');
+		//this.debug('initPresets');
 		let presets = []
 		for (var i = 1; i <= 4; i++) {
 			presets.push({
@@ -1153,7 +1153,7 @@ class instance extends instance_skel {
 		presets.push(showEffectPreset)
 
 		this.setPresetDefinitions(presets)
-		//console.log('after initPresets');
+		//this.debug('after initPresets');
 	}
 }
 
