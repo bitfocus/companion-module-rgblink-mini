@@ -9,6 +9,7 @@ maybe do it in future:
 usefull commands
 * yarn format
 * yarn headless
+* yarn dev-headless
 
 */
 
@@ -135,13 +136,11 @@ class instance extends instance_skel {
 		this.BACKGROUND_COLOR_ON_AIR = this.rgb(255, 0, 0)
 		this.BACKGROUND_COLOR_DEFAULT = this.rgb(0, 0, 0)
 		this.TEXT_COLOR = this.rgb(255, 255, 255)
-		//this.debug('RGBlink mini: constructor');
 		this.initActions()
 		this.initPresets()
 	}
 
 	config_fields() {
-		//this.debug('RGBlink mini: config_fields');
 		return [
 			{
 				type: 'textinput',
@@ -168,7 +167,7 @@ class instance extends instance_skel {
 	}
 
 	destroy() {
-		//this.debug('RGBlink mini: destroy');
+		this.debug('RGBlink mini: destroy')
 		this.sendCommand(DISCONNECT_MSG)
 		if (this.socket !== undefined) {
 			this.socket.destroy()
@@ -178,7 +177,7 @@ class instance extends instance_skel {
 	}
 
 	init() {
-		//this.debug('RGBlink mini: init');
+		this.debug('RGBlink mini: init')
 		this.initUDPConnection()
 		this.initFeedbacks()
 		var self = this
@@ -190,7 +189,6 @@ class instance extends instance_skel {
 	}
 
 	initActions() {
-		//this.debug('RGBlink mini: initActions');
 		let actions = {}
 
 		actions['switch_mode_and_source'] = {
@@ -215,8 +213,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action, bank) => {
-				//this.debug('onAction');
+			callback: (action /*, bank*/) => {
 				this.sendCommand(SWITCH_MODE_MSG[action.options.mode] + SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
 			},
 		}
@@ -260,7 +257,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action, bank) => {
+			callback: (action /*, bank*/) => {
 				this.sendCommandBuildPip(
 					action.options.mode,
 					action.options.pipMode,
@@ -282,8 +279,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action, bank) => {
-				//this.debug('onAction');
+			callback: (action /*, bank*/) => {
 				this.sendCommand(SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
 			},
 		}
@@ -300,8 +296,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action, bank) => {
-				//this.debug('onAction');
+			callback: (action /*, bank*/) => {
 				this.sendCommand(SWITCH_MODE_MSG[action.options.mode])
 			},
 		}
@@ -318,7 +313,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action, bank) => {
+			callback: (action /*, bank*/) => {
 				this.sendCommandPIPMode(action.options.mode)
 			},
 		}
@@ -336,7 +331,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action, bank) => {
+			callback: (action /*, bank*/) => {
 				this.sendCommandSwitchEffect(action.options.mode)
 			},
 		}
@@ -354,8 +349,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action, bank) => {
-				//this.debug('onAction');
+			callback: (action /*, bank*/) => {
 				this.sendCommandSwitchPipLayer(action.options.layer)
 			},
 		}
@@ -372,9 +366,7 @@ class instance extends instance_skel {
 	}
 
 	initUDPConnection() {
-		//this.debug('RGBlink mini: initUDPConnection');
-		//this.debug(this.socket);
-		//this.debug(this.config);
+		this.debug('RGBlink mini: initUDPConnection')
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 			delete this.socket
@@ -387,16 +379,13 @@ class instance extends instance_skel {
 		this.status(this.STATUS_WARNING, 'Connecting')
 
 		if (this.config.host) {
-			//this.debug('RGBlink mini: initializing....');
 			this.socket = new udp(this.config.host, this.config.port)
-			//this.debug(this.socket);
 			this.socket.on('status_change', (status, message) => {
-				//this.debug('RGBlink mini: initUDPConnection status_change:' + status + ' ' + message);
+				this.debug('RGBlink mini: initUDPConnection status_change:' + status + ' ' + message)
 			})
 
 			this.socket.on('error', (err) => {
 				this.debug('RGBlink mini: initUDPConnection error')
-				this.debug('Network error', err)
 				this.log('error', 'Network error: ' + err.message)
 			})
 
@@ -410,10 +399,6 @@ class instance extends instance_skel {
 	}
 
 	onDataReceivedFromDevice(message, metadata) {
-		//this.debug('RGBlink mini: initUDPConnection data');
-		//this.debug(message);
-		//this.debug(metadata);
-
 		// consume message, if received data are valid
 		let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
 		if (redeableMsg) {
@@ -446,7 +431,6 @@ class instance extends instance_skel {
 		}
 
 		let redeableMsg = message.toString('utf8').toUpperCase()
-		//this.debug('GOT  ' + redeableMsg);
 
 		// Checksum checking
 		let checksumInMessage = redeableMsg.substr(16, 2)
@@ -492,20 +476,18 @@ class instance extends instance_skel {
 	}
 
 	parseAndConsumeFeedback(redeableMsg) {
-		let ADDR = redeableMsg.substr(2, 2)
-		let SN = redeableMsg.substr(4, 2)
+		//let ADDR = redeableMsg.substr(2, 2)
+		//let SN = redeableMsg.substr(4, 2)
 		let CMD = redeableMsg.substr(6, 2)
 		let DAT1 = redeableMsg.substr(8, 2)
 		let DAT2 = redeableMsg.substr(10, 2)
 		let DAT3 = redeableMsg.substr(12, 2)
-		let DAT4 = redeableMsg.substr(14, 2)
-
-		let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4
+		//let DAT4 = redeableMsg.substr(14, 2)
 
 		if (CMD == '68') {
 			// 0x68 Establish/disconnect communication
 			// eg. '<F00006866010000CF>';
-			if ((DAT2 = '00')) {
+			if (DAT2 == '00') {
 				this.status(this.STATUS_OK)
 				return this.logFeedback(redeableMsg, 'Device disconnected')
 			} else if (DAT2 == '01') {
@@ -624,19 +606,18 @@ class instance extends instance_skel {
 	}
 
 	sendCommand(cmd) {
-		//this.debug('RGBlink mini: sendCommand');
-		//this.debug(this.socket.connected);
 		if (cmd !== undefined && cmd != '') {
 			if (this.socket !== undefined /*&& this.socket.connected*/) {
 				this.socket.send(cmd)
 				this.debug('SENT ' + cmd)
-				//this.debug(this.socket);
+			} else {
+				this.debug("Can't send command, socked undefined")
 			}
 		}
 	}
 
 	updateConfig(config) {
-		//this.debug('RGBlink mini: updateConfig');
+		this.debug('RGBlink mini: updateConfig')
 		let resetConnection = false
 
 		if (this.config.host != config.host) {
@@ -650,19 +631,11 @@ class instance extends instance_skel {
 		}
 	}
 
-	feedback(feedback, bank) {
-		//this.debug('RGBlink mini: feedback:' + feedback + " bank:" + bank);
-		//this.debug(feedback)
-
+	feedback(feedback /*, bank*/) {
 		if (feedback.type == 'set_source') {
-			//this.debug(feedback.options.sourceNumber + ' ' + this.deviceStatus.selectedSource)
-			let ret = feedback.options.sourceNumber == this.deviceStatus.selectedSource
-			//this.debug(ret);
-			return ret
+			return feedback.options.sourceNumber == this.deviceStatus.selectedSource
 		} else if (feedback.type == 'set_mode') {
-			let ret = feedback.options.mode == this.deviceStatus.switchMode
-			//this.debug('feedback:' + feedback.options.mode + ' ' + this.deviceStatus.switchMode + ' ' + ret)
-			return ret
+			return feedback.options.mode == this.deviceStatus.switchMode
 		} else if (feedback.type == 'set_pip_mode') {
 			return feedback.options.mode == this.deviceStatus.pipMode
 		} else if (feedback.type == 'set_switch_effect') {
@@ -782,7 +755,6 @@ class instance extends instance_skel {
 	}
 
 	initPresets() {
-		//this.debug('initPresets');
 		let presets = []
 		for (var i = 1; i <= 4; i++) {
 			presets.push({
@@ -817,7 +789,7 @@ class instance extends instance_skel {
 				],
 			})
 		}
-		for (var i = 1; i <= 4; i++) {
+		for (i = 1; i <= 4; i++) {
 			presets.push({
 				category: 'Select source on preview',
 				bank: {
@@ -838,7 +810,7 @@ class instance extends instance_skel {
 				],
 			})
 		}
-		for (var i = 1; i <= 4; i++) {
+		for (i = 1; i <= 4; i++) {
 			presets.push({
 				category: 'Select source',
 				bank: {
@@ -1090,7 +1062,7 @@ class instance extends instance_skel {
 			],
 		})
 
-		for (var id in SWITCH_EFFECT) {
+		for (id in SWITCH_EFFECT) {
 			presets.push({
 				category: 'Switch effect',
 				bank: {
@@ -1135,7 +1107,7 @@ class instance extends instance_skel {
 			},
 			feedbacks: [],
 		}
-		for (var id in SWITCH_EFFECT) {
+		for (id in SWITCH_EFFECT) {
 			showEffectPreset.feedbacks.push({
 				type: 'set_switch_effect',
 				options: {
@@ -1153,7 +1125,6 @@ class instance extends instance_skel {
 		presets.push(showEffectPreset)
 
 		this.setPresetDefinitions(presets)
-		//this.debug('after initPresets');
 	}
 }
 
