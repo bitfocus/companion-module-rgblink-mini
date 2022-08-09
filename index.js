@@ -1,6 +1,6 @@
 /*
 maybe do it in future:
-* add homepage, but, git url in package.json
+* add homepage, bug, git url in package.json
 * switch effect - better png, with transparency
 * check on configuration update - what happens
 * SN ? Currently always zero
@@ -107,7 +107,8 @@ class instance extends instance_skel {
 	intervalHandler = undefined
 
 	deviceStatus = {
-		selectedSource: undefined,
+		prevSource: undefined,
+		liveSource: undefined,
 		switchMode: undefined,
 		switchEffect: undefined,
 		pipMode: undefined,
@@ -342,11 +343,8 @@ class instance extends instance_skel {
 	}
 
 	askAboutStatus() {
-		this.sendCommand('<T0000750300000078>') // asking about signal
-		this.sendCommand('<T000078130000008B>') // asking about switch setting
-		this.sendCommand('<T0000751F00000094>') // asking about PIP mode
-		this.sendCommand('<T000078070000007F>') // asking about switch effect
-		this.sendCommand('<T0000751B00000090>') // asking about PIP layer (A or B)
+		this.sendCommand('<T0001F14001000033>')
+		//<T00c3f103000000b7>
 	}
 
 	initUDPConnection() {
@@ -384,16 +382,24 @@ class instance extends instance_skel {
 
 	onDataReceivedFromDevice(message, metadata) {
 		// consume message, if received data are valid
+		if(metadata.size == 22){
+			this.consume22(message);
+			return; 
+		}
 		let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
 		if (redeableMsg) {
 			this.parseAndConsumeFeedback(redeableMsg)
-
-			this.checkFeedbacks('set_source')
-			this.checkFeedbacks('set_mode')
-			this.checkFeedbacks('set_pip_mode')
-			this.checkFeedbacks('set_pip_layer')
-			this.checkFeedbacks('set_switch_effect')
+			this.checkAllFeedbacks();
 		}
+	}
+
+	checkAllFeedbacks(){
+		this.checkFeedbacks('set_source')
+		this.checkFeedbacks('set_source_preview')
+		this.checkFeedbacks('set_mode')
+		this.checkFeedbacks('set_pip_mode')
+		this.checkFeedbacks('set_pip_layer')
+		this.checkFeedbacks('set_switch_effect')
 	}
 
 	logFeedback(redeableMsg, info) {
@@ -402,7 +408,8 @@ class instance extends instance_skel {
 
 	validateReceivedDataAndTranslateMessage(message, metadata) {
 		if (metadata.size !== 19) {
-			this.status(this.STATUS_WARNING, 'Feedback length != 19')
+			this.status(this.STATUS_WARNING, 'Feedback length != 19 : ' + metadata.size)
+			this.debug(message)
 			return false
 		}
 
@@ -428,7 +435,7 @@ class instance extends instance_skel {
 			redeableMsg.substr(14, 2)
 		)
 		if (checksumInMessage != calculatedChecksum) {
-			this.status(this.STATUS_WARNING, 'Incorrect checksum')
+			this.status(this.STATUS_WARNING, 'Incorrect checksum ' + redeableMsg)
 			return false
 		}
 
@@ -455,7 +462,7 @@ class instance extends instance_skel {
 		sum += parseInt(DAT2, PARSE_INT_HEX_MODE)
 		sum += parseInt(DAT3, PARSE_INT_HEX_MODE)
 		sum += parseInt(DAT4, PARSE_INT_HEX_MODE)
-		let checksum = sum.toString(PARSE_INT_HEX_MODE).toUpperCase()
+		let checksum = (sum % 256).toString(PARSE_INT_HEX_MODE).toUpperCase()
 		return checksum
 	}
 
@@ -486,8 +493,8 @@ class instance extends instance_skel {
 				let src = parseInt(DAT3) + 1
 				if (src >= 1 && src <= 4) {
 					this.status(this.STATUS_OK)
-					this.deviceStatus.selectedSource = src
-					return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.selectedSource)
+					this.deviceStatus.liveSource = src
+					return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource)
 				}
 			} else if (DAT1 == '1A' || DAT1 == '1B') {
 				// T0000751B00000090 PIP layer (A or B)
@@ -535,6 +542,20 @@ class instance extends instance_skel {
 		}
 
 		this.debug('Unrecognized feedback message:' + redeableMsg)
+	}
+
+	consume22(message){
+		let prev = message[0];
+		if(prev <=3){
+			this.deviceStatus.prevSource = (prev + 1)
+		}
+
+		let src = message[2];
+		if(src <=3){
+			this.deviceStatus.liveSource = (src +1)
+		}
+
+		this.checkAllFeedbacks()
 	}
 
 	sendCommandPIPMode(mode) {
@@ -617,7 +638,9 @@ class instance extends instance_skel {
 
 	feedback(feedback /*, bank*/) {
 		if (feedback.type == 'set_source') {
-			return feedback.options.sourceNumber == this.deviceStatus.selectedSource
+			return feedback.options.sourceNumber == this.deviceStatus.liveSource
+		} else if (feedback.type == 'set_source_preview'){
+			return feedback.options.sourceNumber == this.deviceStatus.prevSource
 		} else if (feedback.type == 'set_mode') {
 			return feedback.options.mode == this.deviceStatus.switchMode
 		} else if (feedback.type == 'set_pip_mode') {
@@ -635,7 +658,7 @@ class instance extends instance_skel {
 		const feedbacks = {}
 		feedbacks['set_source'] = {
 			type: 'boolean',
-			label: 'Selected source',
+			label: 'Live source',
 			description: 'Source of HDMI signal',
 			style: {
 				color: this.rgb(255, 255, 255),
@@ -653,6 +676,27 @@ class instance extends instance_skel {
 				},
 			],
 		}
+		feedbacks['set_source_preview'] = {
+			type: 'boolean',
+			label: 'Preview source',
+			description: 'Source of HDMI signal',
+			style: {
+				color: this.rgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_PREVIEW,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source number',
+					id: 'sourceNumber',
+					default: '1',
+					tooltip: 'Choose source number',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+		}
+
 		feedbacks['set_mode'] = {
 			type: 'boolean',
 			label: 'Selected mode',
@@ -792,6 +836,18 @@ class instance extends instance_skel {
 						},
 					},
 				],
+				feedbacks: [
+					{
+						type: 'set_source_preview',
+						options: {
+							sourceNumber: i,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_PREVIEW,
+						},
+					},
+				],				
 			})
 		}
 		for (i = 1; i <= 4; i++) {
@@ -813,6 +869,16 @@ class instance extends instance_skel {
 					},
 				],
 				feedbacks: [
+					{
+						type: 'set_source_preview',
+						options: {
+							sourceNumber: i,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_PREVIEW,
+						},
+					},
 					{
 						type: 'set_source',
 						options: {
