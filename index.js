@@ -343,6 +343,11 @@ class instance extends instance_skel {
 	}
 
 	askAboutStatus() {
+		//this.sendCommand('<T0000750300000078>') // asking about signal
+		this.sendCommand('<T000078130000008B>') // asking about switch setting
+		this.sendCommand('<T0000751F00000094>') // asking about PIP mode
+		this.sendCommand('<T000078070000007F>') // asking about switch effect
+		this.sendCommand('<T0000751B00000090>') // asking about PIP layer (A or B)
 		this.sendCommand('<T0001F14001000033>')
 		//<T00c3f103000000b7>
 	}
@@ -382,18 +387,18 @@ class instance extends instance_skel {
 
 	onDataReceivedFromDevice(message, metadata) {
 		// consume message, if received data are valid
-		if(metadata.size == 22){
-			this.consume22(message);
-			return; 
+		if (metadata.size == 22) {
+			this.consume22(message)
+			return
 		}
 		let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
 		if (redeableMsg) {
 			this.parseAndConsumeFeedback(redeableMsg)
-			this.checkAllFeedbacks();
+			this.checkAllFeedbacks()
 		}
 	}
 
-	checkAllFeedbacks(){
+	checkAllFeedbacks() {
 		this.checkFeedbacks('set_source')
 		this.checkFeedbacks('set_source_preview')
 		this.checkFeedbacks('set_mode')
@@ -436,6 +441,7 @@ class instance extends instance_skel {
 		)
 		if (checksumInMessage != calculatedChecksum) {
 			this.status(this.STATUS_WARNING, 'Incorrect checksum ' + redeableMsg)
+			this.debug('redeableMsg Incorrect checksum: ' + checksumInMessage + ' != ' + calculatedChecksum)
 			return false
 		}
 
@@ -463,6 +469,9 @@ class instance extends instance_skel {
 		sum += parseInt(DAT3, PARSE_INT_HEX_MODE)
 		sum += parseInt(DAT4, PARSE_INT_HEX_MODE)
 		let checksum = (sum % 256).toString(PARSE_INT_HEX_MODE).toUpperCase()
+		while (checksum.length < 2) {
+			checksum = '0' + checksum
+		}
 		return checksum
 	}
 
@@ -473,7 +482,18 @@ class instance extends instance_skel {
 		let DAT1 = redeableMsg.substr(8, 2)
 		let DAT2 = redeableMsg.substr(10, 2)
 		let DAT3 = redeableMsg.substr(12, 2)
-		//let DAT4 = redeableMsg.substr(14, 2)
+		let DAT4 = redeableMsg.substr(14, 2)
+
+		let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4
+		if ('F140011600' == importantPart) {
+			// readed status, it's ok
+			this.status(this.STATUS_OK)
+			return this.logFeedback(redeableMsg, 'Status readed')
+		} else if (CMD == 'A2' && DAT1 == '18') {
+			// t-bar position update
+			this.status(this.STATUS_OK)
+			return this.logFeedback(redeableMsg, 'T-BAR position changed')
+		}
 
 		if (CMD == '68') {
 			// 0x68 Establish/disconnect communication
@@ -544,15 +564,15 @@ class instance extends instance_skel {
 		this.debug('Unrecognized feedback message:' + redeableMsg)
 	}
 
-	consume22(message){
-		let prev = message[0];
-		if(prev <=3){
-			this.deviceStatus.prevSource = (prev + 1)
+	consume22(message) {
+		let prev = message[0]
+		if (prev <= 3) {
+			this.deviceStatus.prevSource = prev + 1
 		}
 
-		let src = message[2];
-		if(src <=3){
-			this.deviceStatus.liveSource = (src +1)
+		let src = message[2]
+		if (src <= 3) {
+			this.deviceStatus.liveSource = src + 1
 		}
 
 		this.checkAllFeedbacks()
@@ -639,7 +659,7 @@ class instance extends instance_skel {
 	feedback(feedback /*, bank*/) {
 		if (feedback.type == 'set_source') {
 			return feedback.options.sourceNumber == this.deviceStatus.liveSource
-		} else if (feedback.type == 'set_source_preview'){
+		} else if (feedback.type == 'set_source_preview') {
 			return feedback.options.sourceNumber == this.deviceStatus.prevSource
 		} else if (feedback.type == 'set_mode') {
 			return feedback.options.mode == this.deviceStatus.switchMode
@@ -847,7 +867,7 @@ class instance extends instance_skel {
 							bgcolor: this.BACKGROUND_COLOR_PREVIEW,
 						},
 					},
-				],				
+				],
 			})
 		}
 		for (i = 1; i <= 4; i++) {
