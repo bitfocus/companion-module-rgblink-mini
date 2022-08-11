@@ -21,23 +21,8 @@ const RGBLinkApiConnector = require('./rgblinkapiconnector')
 
 var DEFAULT_MINI_PORT = 1000
 
-const SWITCH_TO_SOURCE_MSG = {
-	1: '<T0000750200000077>',
-	2: '<T0000750200010078>',
-	3: '<T0000750200020079>',
-	4: '<T000075020003007A>',
-}
-
 const SWITCH_MODE_AUTO = 0
 const SWITCH_MODE_TBAR = 1
-
-const SWITCH_MODE_MSG = {}
-SWITCH_MODE_MSG[SWITCH_MODE_AUTO] = '<T000078120000008A>'
-SWITCH_MODE_MSG[SWITCH_MODE_TBAR] = '<T000078120100008B>'
-
-// write mode
-const DISCONNECT_MSG = '<T00006866000000CE>'
-const CONNECT_MSG = '<T00006866010000CF>'
 
 const PIP_MODES = {
 	0: 'PIP off',
@@ -155,7 +140,7 @@ class instance extends instance_skel {
 
 	destroy() {
 		this.debug('RGBlink mini: destroy')
-		this.sendCommand(DISCONNECT_MSG)
+		this.sendDisconnectMessage()
 		this.apiConnector.onDestroy()
 		clearInterval(this.intervalHandler)
 		this.debug('destroy', this.id)
@@ -183,7 +168,7 @@ class instance extends instance_skel {
 		let self = this;
 		this.apiConnector = new RGBLinkApiConnector(this.config.host, DEFAULT_MINI_PORT, this.debug)
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API, (ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) => {
-			self.parseAndConsumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
+			self.consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
 			self.checkAllFeedbacks()
 		})
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, (message, metadata) => {
@@ -203,7 +188,7 @@ class instance extends instance_skel {
 			self.status(self.STATUS_ERROR, message)
 		})
 		this.status(this.STATUS_WARNING, 'Connecting')
-		this.sendCommand(CONNECT_MSG)
+		this.sendConnectMessage()
 		this.askAboutStatus()
 	}
 
@@ -233,7 +218,8 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendCommand(SWITCH_MODE_MSG[action.options.mode] + SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
+				this.sendSwitchModeMessage(action.options.mode);
+				this.sendSwitchToSourceMessage(action.options.sourceNumber)
 			},
 		}
 		actions['build_pip_sources_and_target'] = {
@@ -277,7 +263,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendCommandBuildPip(
+				this.sendBuildPipMessages(
 					action.options.mode,
 					action.options.pipMode,
 					action.options.sourceNumberA,
@@ -299,7 +285,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendCommand(SWITCH_TO_SOURCE_MSG[action.options.sourceNumber])
+				this.sendSwitchToSourceMessage(action.options.sourceNumber)
 			},
 		}
 		actions['switch_mode'] = {
@@ -316,7 +302,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendCommand(SWITCH_MODE_MSG[action.options.mode])
+				this.sendSwitchModeMessage(action.options.mode);
 			},
 		}
 		actions['pip_mode'] = {
@@ -333,7 +319,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendCommandPIPMode(action.options.mode)
+				this.sendPIPModeMessage(action.options.mode)
 			},
 		}
 
@@ -351,7 +337,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendCommandSwitchEffect(action.options.mode)
+				this.sendSwitchEffectMessage(action.options.mode)
 			},
 		}
 
@@ -369,7 +355,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendCommandSwitchPipLayer(action.options.layer)
+				this.sendSwitchPipLayerMessage(action.options.layer)
 			},
 		}
 
@@ -377,13 +363,12 @@ class instance extends instance_skel {
 	}
 
 	askAboutStatus() {
-		//this.sendCommand('<T0000750300000078>') // asking about signal
-		this.sendCommand('<T000078130000008B>') // asking about switch setting
-		this.sendCommand('<T0000751F00000094>') // asking about PIP mode
-		this.sendCommand('<T000078070000007F>') // asking about switch effect
-		this.sendCommand('<T0000751B00000090>') // asking about PIP layer (A or B)
-		this.sendCommand('<T0001F14001000033>')
-		//<T00c3f103000000b7>
+		this.buildAndSendCommand('78', '13', '00', '00', '00') // asking about switch setting
+		this.buildAndSendCommand('75', '1F', '00', '00', '00') // asking about PIP mode
+		this.buildAndSendCommand('78', '07', '00', '00', '00') // asking about switch effect
+		this.buildAndSendCommand('75', '1B', '00', '00', '00') // asking about PIP layer (A or B)
+		this.buildAndSendCommand('F1', '40', '01', '00', '00') // asking about special status 22
+		//<T00c3f103000000b7> // special status2
 	}
 
 	checkAllFeedbacks() {
@@ -399,7 +384,7 @@ class instance extends instance_skel {
 		this.debug('Feedback:' + redeableMsg + ' ' + info)
 	}
 
-	parseAndConsumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
+	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
 		let redeableMsg = [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4].join(' ')
 
 		let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4
@@ -496,16 +481,43 @@ class instance extends instance_skel {
 		this.checkAllFeedbacks()
 	}
 
-	sendCommandPIPMode(mode) {
+	sendConnectMessage(){
+		//const CONNECT_MSG = '<T00006866010000CF>'
+		this.buildAndSendCommand('68', '66', '01' /*Connect*/, '00', '00')
+	}
+
+	sendDisconnectMessage(){
+		this.buildAndSendCommand('68', '66', '00' /*Disconnect*/, '00', '00')
+	}
+
+	sendSwitchModeMessage(mode){
+		if(mode == SWITCH_MODE_AUTO || mode == SWITCH_MODE_TBAR){
+			let modeHex = this.apiConnector.byteToTwoSignHex(mode)
+			this.buildAndSendCommand('78', '12', modeHex, '00', '00')
+		} else {
+			this.debug("Unknown mode " + mode)
+		}
+	}
+
+	sendSwitchToSourceMessage(source){
+		if(source >= 1 && source <=4){
+			let sourceHex = this.apiConnector.byteToTwoSignHex(source-1)
+			this.buildAndSendCommand('75', '02', '00', sourceHex, '00')	
+		} else {
+			this.debug('Bad source:' + source)
+		}
+	}
+
+	sendPIPModeMessage(mode) {
 		this.buildAndSendCommand('75', '1E' /*Write*/, '00', '0' + mode, '00')
 	}
 
-	sendCommandSwitchEffect(effect) {
+	sendSwitchEffectMessage(effect) {
 		let encoded = '0' + parseInt(effect).toString(this.apiConnector.PARSE_INT_HEX_MODE).toUpperCase()
 		this.buildAndSendCommand('78', '06' /*Write*/, encoded, '00', '00')
 	}
 
-	sendCommandSwitchPipLayer(layer) {
+	sendSwitchPipLayerMessage(layer) {
 		// 0 - layer A
 		// 1 - layer B
 		// example layer A <T00f3751a00000082>
@@ -522,34 +534,26 @@ class instance extends instance_skel {
 		this.buildAndSendCommand('75', '1A' /*Write*/, '00', layerCode, '00')
 	}
 
-	sendCommandBuildPip(mode /*T-BAR - preview / Auto - live output */, pipMode, sourceOnLayerA, sourceOnLayerB) {
+	sendBuildPipMessages(mode /*T-BAR - preview / Auto - live output */, pipMode, sourceOnLayerA, sourceOnLayerB) {
 		if (mode == SWITCH_MODE_AUTO || mode == SWITCH_MODE_TBAR) {
-			this.sendCommand(SWITCH_MODE_MSG[mode])
+			this.sendSwitchModeMessage(mode);
 		} else {
 			this.status(this.STATUS_WARNING, 'Bad mode')
 			return
 		}
-		this.sendCommandPIPMode(pipMode)
+		this.sendPIPModeMessage(pipMode)
 		if (sourceOnLayerA >= 0 && sourceOnLayerA <= 3) {
-			this.sendCommandSwitchPipLayer(PIP_LAYER_A)
-			this.sendCommand(SWITCH_TO_SOURCE_MSG[sourceOnLayerA])
+			this.sendSwitchPipLayerMessage(PIP_LAYER_A)
+			this.sendSwitchToSourceMessage(sourceOnLayerA)
 		}
 		if (sourceOnLayerB >= 0 && sourceOnLayerB <= 3) {
-			this.sendCommandSwitchPipLayer(PIP_LAYER_B)
-			this.sendCommand(SWITCH_TO_SOURCE_MSG[sourceOnLayerB])
+			this.sendSwitchPipLayerMessage(PIP_LAYER_B)
+			this.sendSwitchToSourceMessage(sourceOnLayerB)
 		}
 	}
 
 	buildAndSendCommand(CMD, DAT1, DAT2, DAT3, DAT4) {
-		let ADDR = '00'
-		let SN = '00'
-		let checksum = this.calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
-		let cmd = '<T' + ADDR + SN + CMD + DAT1 + DAT2 + DAT3 + DAT4 + checksum + '>'
-		this.sendCommand(cmd)
-	}
-
-	sendCommand(cmd) {
-		this.apiConnector.sendCommand(cmd)
+		this.apiConnector.sendCommand(CMD, DAT1, DAT2, DAT3, DAT4)
 	}
 
 	updateConfig(config) {

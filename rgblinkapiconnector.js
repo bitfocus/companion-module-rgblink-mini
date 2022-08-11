@@ -3,18 +3,20 @@
 const UDPSocket = require('../../udp')
 
 class RGBLinkApiConnector {
-    config = {
-        host: undefined
-    }
-    debug
-    socket = new UDPSocket()
-    eventsListeners = []
     EVENT_NAME_ON_DATA_API = 'on_data'
     EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH = 'on_data_not_standard_length'
     EVENT_NAME_ON_CONNECTION_OK = 'on_connection_ok'
     EVENT_NAME_ON_CONNECTION_WARNING = 'on_connection_warning'
     EVENT_NAME_ON_CONNECTION_ERROR = 'on_connection_error'
     PARSE_INT_HEX_MODE = 16
+
+    config = {
+        host: undefined
+    }
+    debug
+    socket = new UDPSocket()
+    eventsListeners = []
+    nextSn = 0
 
     constructor(host, port, debug) {
         this.debug = debug
@@ -87,7 +89,7 @@ class RGBLinkApiConnector {
         }
     }
 
-    sendCommand(cmd) {
+    sendCommandNative(cmd) {
         try {
             if (cmd !== undefined && cmd != '') {
                 if (this.socket !== undefined) {
@@ -98,6 +100,30 @@ class RGBLinkApiConnector {
             }
         } catch (ex) {
             this.debug(ex)
+        }
+    }
+
+    sendCommand(CMD, DAT1, DAT2, DAT3, DAT4) {
+        let ADDR = '00'
+        let SN = this.byteToTwoSignHex(this.nextSn)
+        this.incrementNextSn()
+        let checksum = this.calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
+        let cmd = '<T' + ADDR + SN + CMD + DAT1 + DAT2 + DAT3 + DAT4 + checksum + '>'
+        this.sendCommandNative(cmd)
+    }
+
+    byteToTwoSignHex(b) {
+        let out = parseInt(b).toString(this.PARSE_INT_HEX_MODE).toUpperCase()
+        while (out.length < 2) {
+            out = '0' + out
+        }
+        return out
+    }
+
+    incrementNextSn() {
+        this.nextSn++
+        if (this.nextSn > 255) {
+            this.nextSn = 0
         }
     }
 
@@ -137,7 +163,6 @@ class RGBLinkApiConnector {
         // end of validate section
 
         this.emit(this.EVENT_NAME_ON_DATA_API, [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4])
-
     }
 
     calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
