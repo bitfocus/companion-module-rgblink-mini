@@ -152,7 +152,7 @@ class instance extends instance_skel {
 
 			this.initApiConnector()
 			this.initFeedbacks()
-			let self = this;
+			let self = this
 			this.intervalHandler = setInterval(function () {
 				if (self.config.polling) {
 					self.askAboutStatus()
@@ -165,7 +165,7 @@ class instance extends instance_skel {
 	}
 
 	initApiConnector() {
-		let self = this;
+		let self = this
 		this.apiConnector = new RGBLinkApiConnector(this.config.host, DEFAULT_MINI_PORT, this.debug)
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API, (ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) => {
 			self.consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
@@ -218,7 +218,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendSwitchModeMessage(action.options.mode);
+				this.sendSwitchModeMessage(action.options.mode)
 				this.sendSwitchToSourceMessage(action.options.sourceNumber)
 			},
 		}
@@ -302,7 +302,7 @@ class instance extends instance_skel {
 				},
 			],
 			callback: (action /*, bank*/) => {
-				this.sendSwitchModeMessage(action.options.mode);
+				this.sendSwitchModeMessage(action.options.mode)
 			},
 		}
 		actions['pip_mode'] = {
@@ -481,28 +481,27 @@ class instance extends instance_skel {
 		this.checkAllFeedbacks()
 	}
 
-	sendConnectMessage(){
-		//const CONNECT_MSG = '<T00006866010000CF>'
+	sendConnectMessage() {
 		this.buildAndSendCommand('68', '66', '01' /*Connect*/, '00', '00')
 	}
 
-	sendDisconnectMessage(){
+	sendDisconnectMessage() {
 		this.buildAndSendCommand('68', '66', '00' /*Disconnect*/, '00', '00')
 	}
 
-	sendSwitchModeMessage(mode){
-		if(mode == SWITCH_MODE_AUTO || mode == SWITCH_MODE_TBAR){
+	sendSwitchModeMessage(mode) {
+		if (mode == SWITCH_MODE_AUTO || mode == SWITCH_MODE_TBAR) {
 			let modeHex = this.apiConnector.byteToTwoSignHex(mode)
 			this.buildAndSendCommand('78', '12', modeHex, '00', '00')
 		} else {
-			this.debug("Unknown mode " + mode)
+			this.debug('Unknown mode ' + mode)
 		}
 	}
 
-	sendSwitchToSourceMessage(source){
-		if(source >= 1 && source <=4){
-			let sourceHex = this.apiConnector.byteToTwoSignHex(source-1)
-			this.buildAndSendCommand('75', '02', '00', sourceHex, '00')	
+	sendSwitchToSourceMessage(source) {
+		if (source >= 1 && source <= 4) {
+			let sourceHex = this.apiConnector.byteToTwoSignHex(source - 1)
+			this.buildAndSendCommand('75', '02', '00', sourceHex, '00')
 		} else {
 			this.debug('Bad source:' + source)
 		}
@@ -518,10 +517,6 @@ class instance extends instance_skel {
 	}
 
 	sendSwitchPipLayerMessage(layer) {
-		// 0 - layer A
-		// 1 - layer B
-		// example layer A <T00f3751a00000082>
-		// example lyaer B <T0046751a000100d6>
 		let layerCode
 		if (layer == PIP_LAYER_A) {
 			layerCode = '00'
@@ -536,7 +531,7 @@ class instance extends instance_skel {
 
 	sendBuildPipMessages(mode /*T-BAR - preview / Auto - live output */, pipMode, sourceOnLayerA, sourceOnLayerB) {
 		if (mode == SWITCH_MODE_AUTO || mode == SWITCH_MODE_TBAR) {
-			this.sendSwitchModeMessage(mode);
+			this.sendSwitchModeMessage(mode)
 		} else {
 			this.status(this.STATUS_WARNING, 'Bad mode')
 			return
