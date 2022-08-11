@@ -54,10 +54,7 @@ class RGBLinkApiConnector {
             if (metadata.size !== 19) {
                 this.emit(this.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, [message, metadata])
             } else {
-                let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
-                if (redeableMsg) {
-                    this.emit(this.EVENT_NAME_ON_DATA_API, [redeableMsg])
-                }
+                this.validateReceivedDataAndEmitIfValid(message, metadata)
             }
         } catch (ex) {
             this.debug(ex)
@@ -104,43 +101,43 @@ class RGBLinkApiConnector {
         }
     }
 
-    validateReceivedDataAndTranslateMessage(message, metadata) {
+    validateReceivedDataAndEmitIfValid(message, metadata) {
         if (metadata.address != this.config.host) {
             this.emit(this.EVENT_NAME_ON_CONNECTION_WARNING, 'Feedback received from different sender ' + metadata.address + ':' + metadata.port)
-            return false
+            return
         }
 
         let redeableMsg = message.toString('utf8').toUpperCase()
 
         // Checksum checking
         let checksumInMessage = redeableMsg.substr(16, 2)
-        let calculatedChecksum = this.calculateChecksum(
-            redeableMsg.substr(2, 2),
-            redeableMsg.substr(4, 2),
-            redeableMsg.substr(6, 2),
-            redeableMsg.substr(8, 2),
-            redeableMsg.substr(10, 2),
-            redeableMsg.substr(12, 2),
-            redeableMsg.substr(14, 2)
-        )
+        let ADDR = redeableMsg.substr(2, 2)
+        let SN = redeableMsg.substr(4, 2)
+        let CMD = redeableMsg.substr(6, 2)
+        let DAT1 = redeableMsg.substr(8, 2)
+        let DAT2 = redeableMsg.substr(10, 2)
+        let DAT3 = redeableMsg.substr(12, 2)
+        let DAT4 = redeableMsg.substr(14, 2)
+        let calculatedChecksum = this.calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
         if (checksumInMessage != calculatedChecksum) {
             this.emit(this.EVENT_NAME_ON_CONNECTION_WARNING, 'Incorrect checksum ' + redeableMsg)
             this.debug('redeableMsg Incorrect checksum: ' + checksumInMessage + ' != ' + calculatedChecksum)
-            return false
+            return
         }
 
         if (redeableMsg[0] != '<' || redeableMsg[1] != 'F' || redeableMsg[18] != '>') {
             this.emit(this.EVENT_NAME_ON_CONNECTION_WARNING, 'Message is not a feedback:' + redeableMsg)
-            return false
+            return
         }
 
         if (redeableMsg.includes('FFFFFFFF')) {
             this.emit(this.EVENT_NAME_ON_CONNECTION_WARNING, 'Feedback with error:' + redeableMsg)
-            return false
+            return
         }
         // end of validate section
 
-        return redeableMsg
+        this.emit(this.EVENT_NAME_ON_DATA_API, [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4])
+
     }
 
     calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {

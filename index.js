@@ -162,28 +162,28 @@ class instance extends instance_skel {
 	}
 
 	init() {
-		try{
-		this.debug('RGBlink mini: init')
+		try {
+			this.debug('RGBlink mini: init')
 
-		this.initApiConnector()
-		this.initFeedbacks()
-		let self = this;
-		this.intervalHandler = setInterval(function () {
-			if (self.config.polling) {
-				self.askAboutStatus()
-			}
-		}, 1000)
-	} catch (ex){
-		this.status(this.STATUS_ERROR, ex)
-		this.debug(ex)
-	}
+			this.initApiConnector()
+			this.initFeedbacks()
+			let self = this;
+			this.intervalHandler = setInterval(function () {
+				if (self.config.polling) {
+					self.askAboutStatus()
+				}
+			}, 1000)
+		} catch (ex) {
+			this.status(this.STATUS_ERROR, ex)
+			this.debug(ex)
+		}
 	}
 
-	initApiConnector(){
+	initApiConnector() {
 		let self = this;
 		this.apiConnector = new RGBLinkApiConnector(this.config.host, DEFAULT_MINI_PORT, this.debug)
-		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API, (redeableMsg) => {
-			self.parseAndConsumeFeedback(redeableMsg)
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API, (ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) => {
+			self.parseAndConsumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
 			self.checkAllFeedbacks()
 		})
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, (message, metadata) => {
@@ -399,14 +399,8 @@ class instance extends instance_skel {
 		this.debug('Feedback:' + redeableMsg + ' ' + info)
 	}
 
-	parseAndConsumeFeedback(redeableMsg) {
-		//let ADDR = redeableMsg.substr(2, 2)
-		//let SN = redeableMsg.substr(4, 2)
-		let CMD = redeableMsg.substr(6, 2)
-		let DAT1 = redeableMsg.substr(8, 2)
-		let DAT2 = redeableMsg.substr(10, 2)
-		let DAT3 = redeableMsg.substr(12, 2)
-		let DAT4 = redeableMsg.substr(14, 2)
+	parseAndConsumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
+		let redeableMsg = [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4].join(' ')
 
 		let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4
 		if ('F140011600' == importantPart) {
