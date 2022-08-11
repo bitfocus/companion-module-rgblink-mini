@@ -14,9 +14,12 @@ usefull commands
 
 */
 
-const udp = require('../../udp')
 const instance_skel = require('../../instance_skel')
+
 const SWITCH_EFFECT_ICONS = require('./images')
+const RGBLinkApiConnector = require('./rgblinkapiconnector')
+
+var DEFAULT_MINI_PORT = 1000
 
 const SWITCH_TO_SOURCE_MSG = {
 	1: '<T0000750200000077>',
@@ -105,6 +108,7 @@ class instance extends instance_skel {
 	BACKGROUND_COLOR_DEFAULT
 	TEXT_COLOR
 	intervalHandler = undefined
+	apiConnector = new RGBLinkApiConnector() //creation should be overwrited in init()
 
 	deviceStatus = {
 		prevSource: undefined,
@@ -154,23 +158,36 @@ class instance extends instance_skel {
 	destroy() {
 		this.debug('RGBlink mini: destroy')
 		this.sendCommand(DISCONNECT_MSG)
-		if (this.socket !== undefined) {
-			this.socket.destroy()
-		}
+		this.apiConnector.onDestroy()
 		clearInterval(this.intervalHandler)
 		this.debug('destroy', this.id)
 	}
 
 	init() {
+		try{
 		this.debug('RGBlink mini: init')
-		this.initUDPConnection()
+
+		let self = this;
+		this.apiConnector = new RGBLinkApiConnector(this.config.host, DEFAULT_MINI_PORT, this.debug)
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA, (message, metadata) => {
+			self.onDataReceivedFromDevice(message, metadata)
+		})
+		this.status(this.STATUS_WARNING, 'Connecting')
+		this.apiConnector.sendCommand(CONNECT_MSG)
+		//this.sendCommand(CONNECT_MSG)
+		//this.askAboutStatus()
+
+
 		this.initFeedbacks()
-		var self = this
 		this.intervalHandler = setInterval(function () {
 			if (self.config.polling) {
 				self.askAboutStatus()
 			}
 		}, 1000)
+	} catch (ex){
+		this.status(this.STATUS_ERROR, ex)
+		console.log(ex)
+	}
 	}
 
 	initActions() {
@@ -350,39 +367,6 @@ class instance extends instance_skel {
 		this.sendCommand('<T0000751B00000090>') // asking about PIP layer (A or B)
 		this.sendCommand('<T0001F14001000033>')
 		//<T00c3f103000000b7>
-	}
-
-	initUDPConnection() {
-		this.debug('RGBlink mini: initUDPConnection')
-		if (this.socket !== undefined) {
-			this.socket.destroy()
-			delete this.socket
-		}
-
-		if (this.config.port === undefined) {
-			this.config.port = 1000
-		}
-
-		this.status(this.STATUS_WARNING, 'Connecting')
-
-		if (this.config.host) {
-			this.socket = new udp(this.config.host, this.config.port)
-			this.socket.on('status_change', (status, message) => {
-				this.debug('RGBlink mini: initUDPConnection status_change:' + status + ' ' + message)
-			})
-
-			this.socket.on('error', (err) => {
-				this.debug('RGBlink mini: initUDPConnection error')
-				this.log('error', 'Network error: ' + err.message)
-			})
-
-			this.socket.on('data', (message, metadata) => {
-				this.onDataReceivedFromDevice(message, metadata)
-			})
-
-			this.sendCommand(CONNECT_MSG)
-			this.askAboutStatus()
-		}
 	}
 
 	onDataReceivedFromDevice(message, metadata) {
@@ -631,14 +615,7 @@ class instance extends instance_skel {
 	}
 
 	sendCommand(cmd) {
-		if (cmd !== undefined && cmd != '') {
-			if (this.socket !== undefined /*&& this.socket.connected*/) {
-				this.socket.send(cmd)
-				this.debug('SENT ' + cmd)
-			} else {
-				this.debug("Can't send command, socked undefined")
-			}
-		}
+		this.apiConnector.sendCommand(cmd)
 	}
 
 	updateConfig(config) {
@@ -651,8 +628,8 @@ class instance extends instance_skel {
 
 		this.config = config
 
-		if (resetConnection === true || this.socket === undefined) {
-			this.initUDPConnection()
+		if (resetConnection === true) {
+			this.apiConnector.createSocket(config.host, DEFAULT_MINI_PORT)
 		}
 	}
 
