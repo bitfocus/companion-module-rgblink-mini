@@ -70,8 +70,6 @@ const SWITCH_EFFECT = {
 	0x0e: '<-O->',
 }
 
-const PARSE_INT_HEX_MODE = 16
-
 const PIP_LAYER_A = 0
 const PIP_LAYER_B = 1
 
@@ -167,18 +165,9 @@ class instance extends instance_skel {
 		try{
 		this.debug('RGBlink mini: init')
 
-		let self = this;
-		this.apiConnector = new RGBLinkApiConnector(this.config.host, DEFAULT_MINI_PORT, this.debug)
-		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA, (message, metadata) => {
-			self.onDataReceivedFromDevice(message, metadata)
-		})
-		this.status(this.STATUS_WARNING, 'Connecting')
-		this.apiConnector.sendCommand(CONNECT_MSG)
-		//this.sendCommand(CONNECT_MSG)
-		//this.askAboutStatus()
-
-
+		this.initApiConnector()
 		this.initFeedbacks()
+		let self = this;
 		this.intervalHandler = setInterval(function () {
 			if (self.config.polling) {
 				self.askAboutStatus()
@@ -186,8 +175,36 @@ class instance extends instance_skel {
 		}, 1000)
 	} catch (ex){
 		this.status(this.STATUS_ERROR, ex)
-		console.log(ex)
+		this.debug(ex)
 	}
+	}
+
+	initApiConnector(){
+		let self = this;
+		this.apiConnector = new RGBLinkApiConnector(this.config.host, DEFAULT_MINI_PORT, this.debug)
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API, (redeableMsg) => {
+			self.parseAndConsumeFeedback(redeableMsg)
+			self.checkAllFeedbacks()
+		})
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, (message, metadata) => {
+			if (metadata.size == 22) {
+				this.consume22(message)
+			} else {
+				//self.status(this.STATUS_WARNING, "Unknown message length:" + metadata.size)
+			}
+		})
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_CONNECTION_OK, (message) => {
+			self.status(self.STATUS_OK, message)
+		})
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_CONNECTION_WARNING, (message) => {
+			self.status(self.STATUS_WARNING, message)
+		})
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_CONNECTION_ERROR, (message) => {
+			self.status(self.STATUS_ERROR, message)
+		})
+		this.status(this.STATUS_WARNING, 'Connecting')
+		this.sendCommand(CONNECT_MSG)
+		this.askAboutStatus()
 	}
 
 	initActions() {
@@ -369,19 +386,6 @@ class instance extends instance_skel {
 		//<T00c3f103000000b7>
 	}
 
-	onDataReceivedFromDevice(message, metadata) {
-		// consume message, if received data are valid
-		if (metadata.size == 22) {
-			this.consume22(message)
-			return
-		}
-		let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
-		if (redeableMsg) {
-			this.parseAndConsumeFeedback(redeableMsg)
-			this.checkAllFeedbacks()
-		}
-	}
-
 	checkAllFeedbacks() {
 		this.checkFeedbacks('set_source')
 		this.checkFeedbacks('set_source_preview')
@@ -393,70 +397,6 @@ class instance extends instance_skel {
 
 	logFeedback(redeableMsg, info) {
 		this.debug('Feedback:' + redeableMsg + ' ' + info)
-	}
-
-	validateReceivedDataAndTranslateMessage(message, metadata) {
-		if (metadata.size !== 19) {
-			this.status(this.STATUS_WARNING, 'Feedback length != 19 : ' + metadata.size)
-			this.debug(message)
-			return false
-		}
-
-		if (metadata.address != this.config.host) {
-			this.status(
-				this.STATUS_WARNING,
-				'Feedback received from different sender ' + metadata.address + ':' + metadata.port
-			)
-			return false
-		}
-
-		let redeableMsg = message.toString('utf8').toUpperCase()
-
-		// Checksum checking
-		let checksumInMessage = redeableMsg.substr(16, 2)
-		let calculatedChecksum = this.calculateChecksum(
-			redeableMsg.substr(2, 2),
-			redeableMsg.substr(4, 2),
-			redeableMsg.substr(6, 2),
-			redeableMsg.substr(8, 2),
-			redeableMsg.substr(10, 2),
-			redeableMsg.substr(12, 2),
-			redeableMsg.substr(14, 2)
-		)
-		if (checksumInMessage != calculatedChecksum) {
-			this.status(this.STATUS_WARNING, 'Incorrect checksum ' + redeableMsg)
-			this.debug('redeableMsg Incorrect checksum: ' + checksumInMessage + ' != ' + calculatedChecksum)
-			return false
-		}
-
-		if (redeableMsg[0] != '<' || redeableMsg[1] != 'F' || redeableMsg[18] != '>') {
-			this.status(this.STATUS_WARNING, 'Message is not a feedback:' + redeableMsg)
-			return false
-		}
-
-		if (redeableMsg.includes('FFFFFFFF')) {
-			this.status(this.STATUS_WARNING, 'Feedback with error:' + redeableMsg)
-			return false
-		}
-		// end of validate section
-
-		return redeableMsg
-	}
-
-	calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
-		let sum = 0
-		sum += parseInt(ADDR, PARSE_INT_HEX_MODE)
-		sum += parseInt(SN, PARSE_INT_HEX_MODE)
-		sum += parseInt(CMD, PARSE_INT_HEX_MODE)
-		sum += parseInt(DAT1, PARSE_INT_HEX_MODE)
-		sum += parseInt(DAT2, PARSE_INT_HEX_MODE)
-		sum += parseInt(DAT3, PARSE_INT_HEX_MODE)
-		sum += parseInt(DAT4, PARSE_INT_HEX_MODE)
-		let checksum = (sum % 256).toString(PARSE_INT_HEX_MODE).toUpperCase()
-		while (checksum.length < 2) {
-			checksum = '0' + checksum
-		}
-		return checksum
 	}
 
 	parseAndConsumeFeedback(redeableMsg) {
@@ -536,7 +476,7 @@ class instance extends instance_skel {
 				}
 			} else if (DAT1 == '06' || DAT1 == '07') {
 				// Switching effect setting
-				let effect = parseInt(DAT2, PARSE_INT_HEX_MODE)
+				let effect = parseInt(DAT2, this.apiConnector.PARSE_INT_HEX_MODE)
 				if (effect >= 0 && effect <= 0x0e) {
 					this.status(this.STATUS_OK)
 					this.deviceStatus.switchEffect = effect
@@ -567,7 +507,7 @@ class instance extends instance_skel {
 	}
 
 	sendCommandSwitchEffect(effect) {
-		let encoded = '0' + parseInt(effect).toString(PARSE_INT_HEX_MODE).toUpperCase()
+		let encoded = '0' + parseInt(effect).toString(this.apiConnector.PARSE_INT_HEX_MODE).toUpperCase()
 		this.buildAndSendCommand('78', '06' /*Write*/, encoded, '00', '00')
 	}
 

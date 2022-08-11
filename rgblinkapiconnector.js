@@ -3,11 +3,18 @@
 const UDPSocket = require('../../udp')
 
 class RGBLinkApiConnector {
+    config = {
+        host: undefined
+    }
     debug
     socket = new UDPSocket()
     eventsListeners = []
-    EVENT_NAME_ON_DATA = 'on_data'
-    EVENT_NAME_ON_STATUS_CHANGE = 'on_status_change'
+    EVENT_NAME_ON_DATA_API = 'on_data'
+    EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH = 'on_data_not_standard_length'
+    EVENT_NAME_ON_CONNECTION_OK = 'on_connection_ok'
+    EVENT_NAME_ON_CONNECTION_WARNING = 'on_connection_warning'
+    EVENT_NAME_ON_CONNECTION_ERROR = 'on_connection_error'
+    PARSE_INT_HEX_MODE = 16
 
     constructor(host, port, debug) {
         this.debug = debug
@@ -18,6 +25,7 @@ class RGBLinkApiConnector {
 
     createSocket(host, port) {
         this.debug('RGBLinkApiConnector: creating socket ' + host + ':' + port + '...')
+        this.config.host = host
 
         if (this.socket !== undefined) {
             this.socket.destroy()
@@ -35,10 +43,25 @@ class RGBLinkApiConnector {
             })
 
             this.socket.on('data', (message, metadata) => {
-                this.emit(this.EVENT_NAME_ON_DATA, [message, metadata])
+                this.onDataReceived(message, metadata)
             })
         }
 
+    }
+
+    onDataReceived(message, metadata) {
+        try {
+            if (metadata.size !== 19) {
+                this.emit(this.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, [message, metadata])
+            } else {
+                let redeableMsg = this.validateReceivedDataAndTranslateMessage(message, metadata)
+                if (redeableMsg) {
+                    this.emit(this.EVENT_NAME_ON_DATA_API, [redeableMsg])
+                }
+            }
+        } catch (ex) {
+            this.debug(ex)
+        }
     }
 
     onDestroy() {
@@ -55,9 +78,15 @@ class RGBLinkApiConnector {
     }
 
     emit = function (event, args) {
-        let listeners = this.eventsListeners[event].slice();
-        for (var i = 0; i < listeners.length; i++) {
-            listeners[i].apply(this, args)
+        if (typeof this.eventsListeners[event] === 'object') {
+            let listeners = this.eventsListeners[event].slice();
+
+            if (!Array.isArray(args)) {
+                args = [args]
+            }
+            for (var i = 0; i < listeners.length; i++) {
+                listeners[i].apply(this, args)
+            }
         }
     }
 
@@ -71,11 +100,64 @@ class RGBLinkApiConnector {
                 }
             }
         } catch (ex) {
-            this.debug("error")
             this.debug(ex)
         }
     }
 
+    validateReceivedDataAndTranslateMessage(message, metadata) {
+        if (metadata.address != this.config.host) {
+            this.emit(this.EVENT_NAME_ON_CONNECTION_WARNING, 'Feedback received from different sender ' + metadata.address + ':' + metadata.port)
+            return false
+        }
+
+        let redeableMsg = message.toString('utf8').toUpperCase()
+
+        // Checksum checking
+        let checksumInMessage = redeableMsg.substr(16, 2)
+        let calculatedChecksum = this.calculateChecksum(
+            redeableMsg.substr(2, 2),
+            redeableMsg.substr(4, 2),
+            redeableMsg.substr(6, 2),
+            redeableMsg.substr(8, 2),
+            redeableMsg.substr(10, 2),
+            redeableMsg.substr(12, 2),
+            redeableMsg.substr(14, 2)
+        )
+        if (checksumInMessage != calculatedChecksum) {
+            this.emit(this.EVENT_NAME_ON_CONNECTION_WARNING, 'Incorrect checksum ' + redeableMsg)
+            this.debug('redeableMsg Incorrect checksum: ' + checksumInMessage + ' != ' + calculatedChecksum)
+            return false
+        }
+
+        if (redeableMsg[0] != '<' || redeableMsg[1] != 'F' || redeableMsg[18] != '>') {
+            this.emit(this.EVENT_NAME_ON_CONNECTION_WARNING, 'Message is not a feedback:' + redeableMsg)
+            return false
+        }
+
+        if (redeableMsg.includes('FFFFFFFF')) {
+            this.emit(this.EVENT_NAME_ON_CONNECTION_WARNING, 'Feedback with error:' + redeableMsg)
+            return false
+        }
+        // end of validate section
+
+        return redeableMsg
+    }
+
+    calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
+        let sum = 0
+        sum += parseInt(ADDR, this.PARSE_INT_HEX_MODE)
+        sum += parseInt(SN, this.PARSE_INT_HEX_MODE)
+        sum += parseInt(CMD, this.PARSE_INT_HEX_MODE)
+        sum += parseInt(DAT1, this.PARSE_INT_HEX_MODE)
+        sum += parseInt(DAT2, this.PARSE_INT_HEX_MODE)
+        sum += parseInt(DAT3, this.PARSE_INT_HEX_MODE)
+        sum += parseInt(DAT4, this.PARSE_INT_HEX_MODE)
+        let checksum = (sum % 256).toString(this.PARSE_INT_HEX_MODE).toUpperCase()
+        while (checksum.length < 2) {
+            checksum = '0' + checksum
+        }
+        return checksum
+    }
 }
 
 module.exports = RGBLinkApiConnector  
