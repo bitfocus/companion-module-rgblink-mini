@@ -2,8 +2,6 @@
 maybe do it in future:
 * add homepage, bug, git url in package.json
 * switch effect - better png, with transparency
-* check on configuration update - what happens
-* detect device is disconnected
 * switch time setting (from 0.5s to 5s)
 
 usefull commands
@@ -60,7 +58,6 @@ class instance extends instance_skel {
 	BACKGROUND_COLOR_ON_AIR
 	BACKGROUND_COLOR_DEFAULT
 	TEXT_COLOR
-	intervalHandler = undefined
 	apiConnector = new RGBLinkMiniConnector() //creation should be overwrited in init()
 
 	constructor(system, id, config) {
@@ -103,7 +100,6 @@ class instance extends instance_skel {
 		this.debug('RGBlink mini: destroy')
 		this.apiConnector.sendDisconnectMessage()
 		this.apiConnector.onDestroy()
-		clearInterval(this.intervalHandler)
 		this.debug('destroy', this.id)
 	}
 
@@ -331,7 +327,7 @@ class instance extends instance_skel {
 			this.apiConnector.createSocket(config.host, DEFAULT_MINI_PORT)
 		}
 
-		this.apiConnector.polling = config.polling
+		this.apiConnector.setPolling(config.polling)
 	}
 
 	feedback(feedback /*, bank*/) {

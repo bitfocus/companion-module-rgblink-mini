@@ -49,11 +49,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		pipLayer: undefined,
 	}
 
-	polling = undefined
-
 	constructor(host, port, debug, polling) {
-		super(host, port, debug)
-		this.polling = polling
+		super(host, port, debug, polling)
 		var self = this
 
 		this.on(this.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, (message, metadata) => {
@@ -69,12 +66,6 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			self.consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
 			this.emit(this.EVENT_NAME_ON_DEVICE_STATE_CHANGED, [])
 		})
-
-		this.intervalHandler = setInterval(function () {
-			if (self.polling) {
-				self.askAboutStatus()
-			}
-		}, 1000)
 	}
 
 	sendConnectMessage() {

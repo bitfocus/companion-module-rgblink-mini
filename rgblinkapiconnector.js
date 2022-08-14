@@ -12,16 +12,55 @@ class RGBLinkApiConnector {
 
 	config = {
 		host: undefined,
+		polling: undefined,
 	}
 	debug
 	socket = new UDPSocket()
 	eventsListeners = []
 	nextSn = 0
+	intervalHandler = undefined
+	lastDataSentTime = undefined
+	lastDataReceivedTime = undefined
+	createTime = new Date().getTime()
 
-	constructor(host, port, debug) {
+	constructor(host, port, debug, polling) {
 		this.debug = debug
+		this.config.polling = polling
+		var self = this
 		if (host) {
 			this.createSocket(host, port)
+		}
+		this.intervalHandler = setInterval(function () {
+			self.onEveryOneSecond()
+		}, 1000)
+	}
+
+	onEveryOneSecond() {
+		if (this.config.polling) {
+			this.askAboutStatus()
+		}
+	}
+
+	onAfterDataSent() {
+		try {
+			var sentDate = new Date().getTime()
+			var self = this
+
+			;(function (sentDate2) {
+				setTimeout(function () {
+					if (typeof self.lastDataReceivedTime === 'undefined' || self.lastDataReceivedTime < sentDate2) {
+						let lastReceiveOrStart = self.lastDataReceivedTime || self.createTime
+						self.emit(
+							self.EVENT_NAME_ON_CONNECTION_WARNING,
+							'The device has not sent any data since ' + new Date(lastReceiveOrStart).toLocaleTimeString()
+						)
+					}
+				}, 2000)
+			})(sentDate)
+		} catch (ex) {
+			if (this.debug) {
+				this.debug(ex)
+			}
 		}
 	}
 
@@ -33,6 +72,8 @@ class RGBLinkApiConnector {
 			this.socket.destroy()
 			delete this.socket
 		}
+		this.lastDataSentTime = undefined
+		this.lastDataReceivedTime = undefined
 
 		if (host) {
 			this.socket = new UDPSocket(host, port)
@@ -57,6 +98,7 @@ class RGBLinkApiConnector {
 			} else {
 				this.validateReceivedDataAndEmitIfValid(message, metadata)
 			}
+			this.lastDataReceivedTime = new Date().getTime()
 		} catch (ex) {
 			this.debug(ex)
 		}
@@ -66,6 +108,7 @@ class RGBLinkApiConnector {
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 		}
+		clearInterval(this.intervalHandler)
 	}
 
 	on = function (event, listener) {
@@ -93,6 +136,8 @@ class RGBLinkApiConnector {
 			if (cmd !== undefined && cmd != '') {
 				if (this.socket !== undefined) {
 					this.socket.send(cmd)
+					this.lastDataSentTime = new Date().getTime()
+					this.onAfterDataSent()
 				} else {
 					this.debug("Can't send command, socket undefined!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 				}
@@ -100,6 +145,14 @@ class RGBLinkApiConnector {
 		} catch (ex) {
 			this.debug(ex)
 		}
+	}
+
+	setPolling(polling) {
+		this.config.polling = polling
+	}
+
+	askAboutStatus() {
+		// to overrirde during implementation with specific device
 	}
 
 	sendCommand(CMD, DAT1, DAT2, DAT3, DAT4) {
