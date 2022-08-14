@@ -13,5 +13,13 @@
   "license": "MIT",
   "devDependencies": {
     "eslint": "^8.21.0"
+  },
+  "homepage": "https://github.com/bitfocus/companion-module-rgblink-mini",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bitfocus/companion-module-rgblink-mini.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bitfocus/companion-module-rgblink-mini/issues"
   }
 }

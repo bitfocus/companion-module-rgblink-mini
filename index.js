@@ -1,6 +1,5 @@
 /*
 maybe do it in future:
-* add homepage, bug, git url in package.json
 * switch effect - better png, with transparency
 * switch time setting (from 0.5s to 5s)
 
