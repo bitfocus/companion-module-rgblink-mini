@@ -38,8 +38,7 @@ const SWITCH_EFFECT = {
 }
 
 class RGBLinkMiniConnector extends RGBLinkApiConnector {
-
-    EVENT_NAME_ON_DEVICE_STATE_CHANGED = 'on_device_state_changed'
+	EVENT_NAME_ON_DEVICE_STATE_CHANGED = 'on_device_state_changed'
 
 	deviceStatus = {
 		prevSource: undefined,
@@ -48,16 +47,19 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		switchEffect: undefined,
 		pipMode: undefined,
 		pipLayer: undefined,
-	}    
+	}
 
-	constructor(host, port, debug) {
+	polling = undefined
+
+	constructor(host, port, debug, polling) {
 		super(host, port, debug)
-        var self = this
-        
+		this.polling = polling
+		var self = this
+
 		this.on(this.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, (message, metadata) => {
 			if (metadata.size == 22) {
 				self.consume22(message)
-                this.emit(this.EVENT_NAME_ON_DEVICE_STATE_CHANGED, [])
+				this.emit(this.EVENT_NAME_ON_DEVICE_STATE_CHANGED, [])
 			} else {
 				//self.status(this.STATUS_WARNING, "Unknown message length:" + metadata.size)
 			}
@@ -68,8 +70,12 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			this.emit(this.EVENT_NAME_ON_DEVICE_STATE_CHANGED, [])
 		})
 
-
-	}    
+		this.intervalHandler = setInterval(function () {
+			if (self.polling) {
+				self.askAboutStatus()
+			}
+		}, 1000)
+	}
 
 	sendConnectMessage() {
 		this.sendCommand('68', '66', '01' /*Connect*/, '00', '00')
@@ -155,7 +161,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		if (src <= 3) {
 			this.deviceStatus.liveSource = src + 1
 		}
-	}    
+	}
 
 	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
 		let redeableMsg = [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4].join(' ')
@@ -163,7 +169,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4
 		if ('F140011600' == importantPart) {
 			// readed status, it's ok
-            this.emitConnectionStatusOK()
+			this.emitConnectionStatusOK()
 			return this.logFeedback(redeableMsg, 'Status readed')
 		} else if (CMD == 'A2' && DAT1 == '18') {
 			// t-bar position update
@@ -238,17 +244,15 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 
 		this.debug('Unrecognized feedback message:' + redeableMsg)
-	}    
+	}
 
 	logFeedback(redeableMsg, info) {
 		this.debug('Feedback:' + redeableMsg + ' ' + info)
 	}
 
-    emitConnectionStatusOK(){
-        this.emit(this.EVENT_NAME_ON_CONNECTION_OK, [])
-    }
-
-
+	emitConnectionStatusOK() {
+		this.emit(this.EVENT_NAME_ON_CONNECTION_OK, [])
+	}
 }
 
 module.exports.RGBLinkMiniConnector = RGBLinkMiniConnector

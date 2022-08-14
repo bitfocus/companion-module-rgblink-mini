@@ -110,15 +110,8 @@ class instance extends instance_skel {
 	init() {
 		try {
 			this.debug('RGBlink mini: init')
-
 			this.initApiConnector()
 			this.initFeedbacks()
-			let self = this
-			this.intervalHandler = setInterval(function () {
-				if (self.config.polling) {
-					self.apiConnector.askAboutStatus()
-				}
-			}, 1000)
 		} catch (ex) {
 			this.status(this.STATUS_ERROR, ex)
 			this.debug(ex)
@@ -127,7 +120,7 @@ class instance extends instance_skel {
 
 	initApiConnector() {
 		let self = this
-		this.apiConnector = new RGBLinkMiniConnector(this.config.host, DEFAULT_MINI_PORT, this.debug)
+		this.apiConnector = new RGBLinkMiniConnector(this.config.host, DEFAULT_MINI_PORT, this.debug, this.config.polling)
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DEVICE_STATE_CHANGED, () => {
 			self.checkAllFeedbacks()
 		})
@@ -337,6 +330,8 @@ class instance extends instance_skel {
 		if (resetConnection === true) {
 			this.apiConnector.createSocket(config.host, DEFAULT_MINI_PORT)
 		}
+
+		this.apiConnector.polling = config.polling
 	}
 
 	feedback(feedback /*, bank*/) {
