@@ -22,40 +22,11 @@ const {
 	SWITCH_MODE_AUTO,
 	PIP_LAYER_A,
 	PIP_LAYER_B,
+	PIP_MODES,
+	SWITCH_EFFECT,
 } = require('./rgblinkminiconnector')
 
 var DEFAULT_MINI_PORT = 1000
-
-const PIP_MODES = {
-	0: 'PIP off',
-	1: 'PWP center',
-	2: 'PWP left top',
-	3: 'PWP right top',
-	4: 'PWP left bottom',
-	5: 'PWP right bottom',
-	6: 'PBP top',
-	7: 'PBP bottom',
-	8: 'PBP left',
-	9: 'PBP right',
-}
-
-const SWITCH_EFFECT = {
-	0: 'CUT',
-	1: 'FADE',
-	2: '<-[]->',
-	3: 'L->R',
-	4: 'T->B',
-	5: 'LT->RB',
-	6: '<-+->',
-	7: 'R->L',
-	8: 'B->T',
-	9: 'L<-M->R',
-	0x0a: 'T<-M->B',
-	0x0b: '->+<-',
-	0x0c: '|||->',
-	0x0d: '->[]<-',
-	0x0e: '<-O->',
-}
 
 const SOURCE_CHOICES_PART = [
 	{ id: '1', label: '1' },
@@ -91,15 +62,6 @@ class instance extends instance_skel {
 	TEXT_COLOR
 	intervalHandler = undefined
 	apiConnector = new RGBLinkMiniConnector() //creation should be overwrited in init()
-
-	deviceStatus = {
-		prevSource: undefined,
-		liveSource: undefined,
-		switchMode: undefined,
-		switchEffect: undefined,
-		pipMode: undefined,
-		pipLayer: undefined,
-	}
 
 	constructor(system, id, config) {
 		super(system, id, config)
@@ -166,16 +128,8 @@ class instance extends instance_skel {
 	initApiConnector() {
 		let self = this
 		this.apiConnector = new RGBLinkMiniConnector(this.config.host, DEFAULT_MINI_PORT, this.debug)
-		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API, (ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) => {
-			self.consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DEVICE_STATE_CHANGED, () => {
 			self.checkAllFeedbacks()
-		})
-		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, (message, metadata) => {
-			if (metadata.size == 22) {
-				this.consume22(message)
-			} else {
-				//self.status(this.STATUS_WARNING, "Unknown message length:" + metadata.size)
-			}
 		})
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_CONNECTION_OK, (message) => {
 			self.status(self.STATUS_OK, message)
@@ -370,107 +324,6 @@ class instance extends instance_skel {
 		this.checkFeedbacks('set_switch_effect')
 	}
 
-	logFeedback(redeableMsg, info) {
-		this.debug('Feedback:' + redeableMsg + ' ' + info)
-	}
-
-	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
-		let redeableMsg = [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4].join(' ')
-
-		let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4
-		if ('F140011600' == importantPart) {
-			// readed status, it's ok
-			this.status(this.STATUS_OK)
-			return this.logFeedback(redeableMsg, 'Status readed')
-		} else if (CMD == 'A2' && DAT1 == '18') {
-			// t-bar position update
-			this.status(this.STATUS_OK)
-			return this.logFeedback(redeableMsg, 'T-BAR position changed')
-		}
-
-		if (CMD == '68') {
-			// 0x68 Establish/disconnect communication
-			// eg. '<F00006866010000CF>';
-			if (DAT2 == '00') {
-				this.status(this.STATUS_OK)
-				return this.logFeedback(redeableMsg, 'Device disconnected')
-			} else if (DAT2 == '01') {
-				this.status(this.STATUS_OK)
-				return this.logFeedback(redeableMsg, 'Device connected')
-			}
-		} else if (CMD == '75') {
-			// 0x75 Read/write video processor information
-			if (DAT1 == '02' || DAT1 == '03') {
-				// Signal source switching Settings
-				// 0x02(Write), 0x03(Read)
-				let src = parseInt(DAT3) + 1
-				if (src >= 1 && src <= 4) {
-					this.status(this.STATUS_OK)
-					this.deviceStatus.liveSource = src
-					return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource)
-				}
-			} else if (DAT1 == '1A' || DAT1 == '1B') {
-				// T0000751B00000090 PIP layer (A or B)
-				if (DAT3 == '00') {
-					this.status(this.STATUS_OK)
-					this.deviceStatus.pipLayer = PIP_LAYER_A
-					return this.logFeedback(redeableMsg, 'PIP Layer A')
-				} else if (DAT3 == '01') {
-					this.status(this.STATUS_OK)
-					this.deviceStatus.pipLayer = PIP_LAYER_B
-					return this.logFeedback(redeableMsg, 'PIP Layer B')
-				}
-			} else if (DAT1 == '1E' || DAT1 == '1F') {
-				// Picture-In-Picture mode
-				// 0x1E(Write), 0x1F(Read)
-				let mode = parseInt(DAT3)
-				if (mode >= 0 && mode <= 9) {
-					this.status(this.STATUS_OK)
-					this.deviceStatus.pipMode = mode
-					return this.logFeedback(redeableMsg, 'PIP mode: ' + PIP_MODES[mode])
-				}
-			}
-		} else if (CMD == '78') {
-			// 0x78 Switching Setting
-			if (DAT1 == '12' || DAT1 == '13') {
-				// T-BAR/Auto
-				if (DAT2 == '00') {
-					this.status(this.STATUS_OK)
-					this.deviceStatus.switchMode = parseInt(DAT2)
-					return this.logFeedback(redeableMsg, 'Swtich mode Auto')
-				} else if (DAT2 == '01') {
-					this.status(this.STATUS_OK)
-					this.deviceStatus.switchMode = parseInt(DAT2)
-					return this.logFeedback(redeableMsg, 'Swtich mode T-BAR')
-				}
-			} else if (DAT1 == '06' || DAT1 == '07') {
-				// Switching effect setting
-				let effect = parseInt(DAT2, this.apiConnector.PARSE_INT_HEX_MODE)
-				if (effect >= 0 && effect <= 0x0e) {
-					this.status(this.STATUS_OK)
-					this.deviceStatus.switchEffect = effect
-					return this.logFeedback(redeableMsg, 'Switch effect: ' + SWITCH_EFFECT[effect])
-				}
-			}
-		}
-
-		this.debug('Unrecognized feedback message:' + redeableMsg)
-	}
-
-	consume22(message) {
-		let prev = message[0]
-		if (prev <= 3) {
-			this.deviceStatus.prevSource = prev + 1
-		}
-
-		let src = message[2]
-		if (src <= 3) {
-			this.deviceStatus.liveSource = src + 1
-		}
-
-		this.checkAllFeedbacks()
-	}
-
 	updateConfig(config) {
 		this.debug('RGBlink mini: updateConfig')
 		let resetConnection = false
@@ -488,17 +341,17 @@ class instance extends instance_skel {
 
 	feedback(feedback /*, bank*/) {
 		if (feedback.type == 'set_source') {
-			return feedback.options.sourceNumber == this.deviceStatus.liveSource
+			return feedback.options.sourceNumber == this.apiConnector.deviceStatus.liveSource
 		} else if (feedback.type == 'set_source_preview') {
-			return feedback.options.sourceNumber == this.deviceStatus.prevSource
+			return feedback.options.sourceNumber == this.apiConnector.deviceStatus.prevSource
 		} else if (feedback.type == 'set_mode') {
-			return feedback.options.mode == this.deviceStatus.switchMode
+			return feedback.options.mode == this.apiConnector.deviceStatus.switchMode
 		} else if (feedback.type == 'set_pip_mode') {
-			return feedback.options.mode == this.deviceStatus.pipMode
+			return feedback.options.mode == this.apiConnector.deviceStatus.pipMode
 		} else if (feedback.type == 'set_switch_effect') {
-			return feedback.options.mode == this.deviceStatus.switchEffect
+			return feedback.options.mode == this.apiConnector.deviceStatus.switchEffect
 		} else if (feedback.type == 'set_pip_layer') {
-			return feedback.options.layer == this.deviceStatus.pipLayer
+			return feedback.options.layer == this.apiConnector.deviceStatus.pipLayer
 		}
 
 		return false
