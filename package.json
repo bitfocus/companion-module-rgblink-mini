@@ -1,9 +1,9 @@
 {
   "name": "rgblink-mini",
   "version": "1.0.0",
-  "description": "RGBlink mini",
+  "description": "RGBlink mini/mini+",
   "manufacturer": "RGBlink",
-  "product": "mini",
+  "product": "mini/mini+",
   "shortname": "mini",
   "main": "index.js",
   "scripts": {
