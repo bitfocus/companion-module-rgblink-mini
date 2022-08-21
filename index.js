@@ -19,6 +19,7 @@ const {
 	SWITCH_MODE_AUTO,
 	PIP_LAYER_A,
 	PIP_LAYER_B,
+	PIP_MODE_OFF,
 	PIP_MODES,
 	SWITCH_EFFECT,
 } = require('./rgblinkminiconnector')
@@ -160,6 +161,7 @@ class instance extends instance_skel {
 			],
 			callback: (action /*, bank*/) => {
 				this.apiConnector.sendSwitchModeMessage(action.options.mode)
+				this.apiConnector.sendPIPModeMessage(PIP_MODE_OFF)
 				this.apiConnector.sendSwitchToSourceMessage(action.options.sourceNumber)
 			},
 		}
@@ -392,7 +394,7 @@ class instance extends instance_skel {
 
 		feedbacks['set_mode'] = {
 			type: 'boolean',
-			label: 'Selected mode',
+			label: 'Selected switch mode',
 			description: 'Mode Auto/T-Bar',
 			style: {
 				color: this.rgb(255, 255, 255),

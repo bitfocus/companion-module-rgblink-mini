@@ -6,8 +6,9 @@ const SWITCH_MODE_TBAR = 1
 const PIP_LAYER_A = 0
 const PIP_LAYER_B = 1
 
+const PIP_MODE_OFF = 0
 const PIP_MODES = {
-	0: 'PIP off',
+	PIP_MODE_OFF: 'PIP off',
 	1: 'PWP center',
 	2: 'PWP left top',
 	3: 'PWP right top',
@@ -251,5 +252,6 @@ module.exports.SWITCH_MODE_AUTO = SWITCH_MODE_AUTO
 module.exports.SWITCH_MODE_TBAR = SWITCH_MODE_TBAR
 module.exports.PIP_LAYER_A = PIP_LAYER_A
 module.exports.PIP_LAYER_B = PIP_LAYER_B
+module.exports.PIP_MODE_OFF = PIP_MODE_OFF
 module.exports.PIP_MODES = PIP_MODES
 module.exports.SWITCH_EFFECT = SWITCH_EFFECT
