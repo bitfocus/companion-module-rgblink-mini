@@ -46,17 +46,17 @@ class RGBLinkApiConnector {
 			var sentDate = new Date().getTime()
 			var self = this
 
-			;(function (sentDate2) {
-				setTimeout(function () {
-					if (typeof self.lastDataReceivedTime === 'undefined' || self.lastDataReceivedTime < sentDate2) {
-						let lastReceiveOrStart = self.lastDataReceivedTime || self.createTime
-						self.emit(
-							self.EVENT_NAME_ON_CONNECTION_WARNING,
-							'The device has not sent any data since ' + new Date(lastReceiveOrStart).toLocaleTimeString()
-						)
-					}
-				}, 2000)
-			})(sentDate)
+				; (function (sentDate2) {
+					setTimeout(function () {
+						if (typeof self.lastDataReceivedTime === 'undefined' || self.lastDataReceivedTime < sentDate2) {
+							let lastReceiveOrStart = self.lastDataReceivedTime || self.createTime
+							self.emit(
+								self.EVENT_NAME_ON_CONNECTION_WARNING,
+								'The device has not sent any data since ' + new Date(lastReceiveOrStart).toLocaleTimeString()
+							)
+						}
+					}, 2000)
+				})(sentDate)
 		} catch (ex) {
 			if (this.debug) {
 				this.debug(ex)
@@ -157,6 +157,10 @@ class RGBLinkApiConnector {
 
 	sendCommand(CMD, DAT1, DAT2, DAT3, DAT4) {
 		let ADDR = '00'
+		this.sendCommandWithAddr(ADDR, CMD, DAT1, DAT2, DAT3, DAT4)
+	}
+
+	sendCommandWithAddr(ADDR, CMD, DAT1, DAT2, DAT3, DAT4) {
 		let SN = this.byteToTwoSignHex(this.nextSn)
 		this.incrementNextSn()
 		let checksum = this.calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
