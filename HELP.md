@@ -25,3 +25,5 @@ Devices must be controlled over a network, USB control is NOT supported.
 - Selected PIP mode
 - Selected PIP layer
 - Selected switch effect
+
+See presets to view examples
