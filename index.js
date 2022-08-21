@@ -62,7 +62,7 @@ class instance extends instance_skel {
 
 	constructor(system, id, config) {
 		super(system, id, config)
-		this.BACKGROUND_COLOR_PREVIEW = this.rgb(0, 255, 0)
+		this.BACKGROUND_COLOR_PREVIEW = this.rgb(0, 128, 0)
 		this.BACKGROUND_COLOR_ON_AIR = this.rgb(255, 0, 0)
 		this.BACKGROUND_COLOR_DEFAULT = this.rgb(0, 0, 0)
 		this.TEXT_COLOR = this.rgb(255, 255, 255)
