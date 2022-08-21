@@ -13,7 +13,7 @@ Devices must be controlled over a network, USB control is NOT supported.
 - Build PIP from selected sources (select PIP mode and two sources for PIP, and target - live output or preview)
 - Switch to signal source (Like pressing the 1/2/3/4 source button on the device)
 - Set switch mode (T-BAR/Auto)
-- Set Picture-In-Picture mode (Depends on switch mode (T-BAR / Auto) it sets PIP on Live output or Preview)
+- Set Picture-In-Picture mode
 - Set switch effect
 - Set PIP layer (A or B)
 
