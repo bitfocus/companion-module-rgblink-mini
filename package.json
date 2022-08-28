@@ -1,11 +1,12 @@
 {
   "name": "rgblink-mini",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "RGBlink mini/mini+",
   "manufacturer": "RGBlink",
   "product": "mini/mini+",
   "shortname": "mini",
   "main": "index.js",
+  "keywords": "[rgblink],[mini]",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
