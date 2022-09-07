@@ -84,7 +84,7 @@ class instance extends instance_skel {
 				id: 'info',
 				width: 12,
 				label: 'Port',
-				value: 'Will be used default port ' + this.config.port,
+				value: 'Will be used default port ' + DEFAULT_MINI_PORT,
 			},
 			{
 				type: 'checkbox',
