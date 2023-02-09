@@ -1,4 +1,4 @@
-const { InstanceBase, runEntrypoint, InstanceStatus } = require('@companion-module/base')
+const { InstanceBase, runEntrypoint, InstanceStatus, Regex } = require('@companion-module/base')
 const UpgradeScripts = require('./upgrades')
 const { combineRgb } = require('@companion-module/base')
 
@@ -13,8 +13,7 @@ const {
 	PIP_MODES,
 	SWITCH_EFFECT,
 } = require('./api/rgblinkminiconnector')
-
-var DEFAULT_MINI_PORT = 1000
+const { ApiConfig } = require('./api/rgblinkapiconnector')
 
 const SOURCE_CHOICES_PART = [
 	{ id: '1', label: '1' },
@@ -63,16 +62,17 @@ class MiniModuleInstance extends InstanceBase {
 			{
 				type: 'textinput',
 				id: 'host',
-				label: 'IP address of RGBlink mini device',
-				width: 12,
-				regex: this.REGEX_IP,
+				label: 'Target IP',
+				width: 8,
+				regex: Regex.IP,
 			},
 			{
-				type: 'text',
-				id: 'info',
-				width: 12,
-				label: 'Port',
-				value: 'Will be used default port ' + DEFAULT_MINI_PORT,
+				type: 'textinput',
+				id: 'port',
+				label: 'Target Port',
+				width: 4,
+				default: '1000',
+				regex: Regex.PORT,
 			},
 			{
 				type: 'checkbox',
@@ -80,6 +80,15 @@ class MiniModuleInstance extends InstanceBase {
 				id: 'polling',
 				width: 12,
 				default: true,
+			},
+			{
+				type: 'checkbox',
+				label: 'Debug logging of every sent/received command (may slow down your computer)',
+				tooltip: 'test toolitp',
+				description: 'test descri',
+				id: 'logEveryCommand',
+				width: 12,
+				default: false,
 			},
 		]
 	}
@@ -110,7 +119,10 @@ class MiniModuleInstance extends InstanceBase {
 
 	initApiConnector() {
 		let self = this
-		this.apiConnector = new RGBLinkMiniConnector(this.config.host, DEFAULT_MINI_PORT, this.debug, this.config.polling)
+		this.apiConnector = new RGBLinkMiniConnector(
+			new ApiConfig(this.config.host, this.config.port ? this.config.port : 1000, this.config.polling, this.config.logEveryCommand ? this.config.logEveryCommand : false)
+		)
+		this.apiConnector.enableLog(this)
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DEVICE_STATE_CHANGED, (changedEvents) => {
 			self.checkAllFeedbacks(changedEvents)
 		})
@@ -124,7 +136,7 @@ class MiniModuleInstance extends InstanceBase {
 			self.updateStatus(InstanceStatus.UnknownError, message)
 		})
 		this.updateStatus(InstanceStatus.Connecting)
-		this.apiConnector.setLogEveryCommand(true)
+		this.apiConnector.setLogEveryCommand(this.config.logEveryCommand)
 	}
 
 	updateActions() {
@@ -312,18 +324,18 @@ class MiniModuleInstance extends InstanceBase {
 		try {
 			let resetConnection = false
 
-			if (this.config.host != config.host) {
+			if (this.config.host != config.host || this.config.port != config.port) {
 				resetConnection = true
 			}
 
 			this.config = config
 
 			if (resetConnection === true) {
-				this.apiConnector.createSocket(config.host, DEFAULT_MINI_PORT)
+				this.apiConnector.createSocket(config.host, config.port)
 			}
 
-			this.apiConnector.setPolling(config.polling)
-			this.apiConnector.setLogEveryCommand(true)
+			this.apiConnector.setPolling(this.config.polling)
+			this.apiConnector.setLogEveryCommand(this.config.logEveryCommand ? this.config.logEveryCommand : false)
 		} catch (ex) {
 			this.updateStatus(InstanceStatus.UnknownError, ex)
 			console.log(ex)

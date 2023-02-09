@@ -1,4 +1,4 @@
-const { RGBLinkApiConnector, PollingCommand } = require('./rgblinkapiconnector')
+const { RGBLinkApiConnector, PollingCommand, ApiConfig } = require('./rgblinkapiconnector')
 
 const SWITCH_MODE_AUTO = 0
 const SWITCH_MODE_TBAR = 1
@@ -50,8 +50,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		pipLayer: undefined,
 	}
 
-	constructor(host, port, debug, polling) {
-		super({ host: host, port: port, polling: polling })
+	constructor(/*ApiConfig*/ config = new ApiConfig()) {
+		super(config)
 		var self = this
 
 		this.on(this.EVENT_NAME_ON_DATA_API_NOT_STANDARD_LENGTH, (message) => {
