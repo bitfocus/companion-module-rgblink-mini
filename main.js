@@ -1,16 +1,6 @@
-/*
-maybe do it in future:
-* switch effect - better png, with transparency
-* switch time setting (from 0.5s to 5s)
-
-usefull commands
-* yarn format
-* yarn headless
-* yarn dev-headless
-
-*/
-
-const instance_skel = require('../../instance_skel')
+const { InstanceBase, runEntrypoint, InstanceStatus } = require('@companion-module/base')
+const UpgradeScripts = require('./upgrades')
+const { combineRgb } = require('@companion-module/base')
 
 const SWITCH_EFFECT_ICONS = require('./images')
 const {
@@ -22,7 +12,7 @@ const {
 	PIP_MODE_OFF,
 	PIP_MODES,
 	SWITCH_EFFECT,
-} = require('./rgblinkminiconnector')
+} = require('./api/rgblinkminiconnector')
 
 var DEFAULT_MINI_PORT = 1000
 
@@ -53,24 +43,22 @@ const PART_CHOICES_PIP_LAYERS = [
 	{ id: PIP_LAYER_B, label: 'B (additional/second)' },
 ]
 
-class instance extends instance_skel {
+class MiniModuleInstance extends InstanceBase {
 	BACKGROUND_COLOR_PREVIEW
 	BACKGROUND_COLOR_ON_AIR
 	BACKGROUND_COLOR_DEFAULT
 	TEXT_COLOR
 	apiConnector = new RGBLinkMiniConnector() //creation should be overwrited in init()
 
-	constructor(system, id, config) {
-		super(system, id, config)
-		this.BACKGROUND_COLOR_PREVIEW = this.rgb(0, 128, 0)
-		this.BACKGROUND_COLOR_ON_AIR = this.rgb(255, 0, 0)
-		this.BACKGROUND_COLOR_DEFAULT = this.rgb(0, 0, 0)
-		this.TEXT_COLOR = this.rgb(255, 255, 255)
-		this.initActions()
-		this.initPresets()
+	constructor(internal) {
+		super(internal)
+		this.BACKGROUND_COLOR_PREVIEW = combineRgb(0, 128, 0)
+		this.BACKGROUND_COLOR_ON_AIR = combineRgb(255, 0, 0)
+		this.BACKGROUND_COLOR_DEFAULT = combineRgb(0, 0, 0)
+		this.TEXT_COLOR = combineRgb(255, 255, 255)
 	}
 
-	config_fields() {
+	getConfigFields() {
 		return [
 			{
 				type: 'textinput',
@@ -97,48 +85,53 @@ class instance extends instance_skel {
 	}
 
 	destroy() {
-		this.debug('RGBlink mini: destroy')
+		this.log('debug', 'destroy')
 		this.apiConnector.sendDisconnectMessage()
 		this.apiConnector.onDestroy()
-		this.debug('destroy', this.id)
+		this.log('debug', 'destroy', this.id)
 	}
 
-	init() {
+	async init(config) {
+		this.config = config
+
 		try {
-			this.debug('RGBlink mini: init')
+			this.log('debug', 'init')
 			this.initApiConnector()
-			this.initFeedbacks()
+
+			this.updateActions()
+			this.updateFeedbacks()
+			this.updatePresets()
 		} catch (ex) {
-			this.status(this.STATUS_ERROR, ex)
-			this.debug(ex)
+			this.updateStatus(InstanceStatus.UnknownError, ex)
+			console.log(ex)
+			this.log('error', ex)
 		}
 	}
 
 	initApiConnector() {
 		let self = this
 		this.apiConnector = new RGBLinkMiniConnector(this.config.host, DEFAULT_MINI_PORT, this.debug, this.config.polling)
-		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DEVICE_STATE_CHANGED, () => {
-			self.checkAllFeedbacks()
+		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DEVICE_STATE_CHANGED, (changedEvents) => {
+			self.checkAllFeedbacks(changedEvents)
 		})
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_CONNECTION_OK, (message) => {
-			self.status(self.STATUS_OK, message)
+			self.updateStatus(InstanceStatus.Ok, message)
 		})
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_CONNECTION_WARNING, (message) => {
-			self.status(self.STATUS_WARNING, message)
+			self.updateStatus(InstanceStatus.UnknownWarning, message)
 		})
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_CONNECTION_ERROR, (message) => {
-			self.status(self.STATUS_ERROR, message)
+			self.updateStatus(InstanceStatus.UnknownError, message)
 		})
-		this.status(this.STATUS_WARNING, 'Connecting')
-		this.apiConnector.sendConnectMessage()
-		this.apiConnector.askAboutStatus()
+		this.updateStatus(InstanceStatus.Connecting)
+		this.apiConnector.setLogEveryCommand(true)
 	}
 
-	initActions() {
+	updateActions() {
 		let actions = {}
 
 		actions['switch_mode_and_source'] = {
-			label: 'Select source and target',
+			name: 'Select source and target',
 			options: [
 				{
 					type: 'dropdown',
@@ -159,14 +152,14 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action /*, bank*/) => {
+			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSwitchModeMessage(action.options.mode)
 				this.apiConnector.sendPIPModeMessage(PIP_MODE_OFF)
 				this.apiConnector.sendSwitchToSourceMessage(action.options.sourceNumber)
 			},
 		}
 		actions['build_pip_sources_and_target'] = {
-			label: 'Build PIP from selected sources',
+			name: 'Build PIP from selected sources',
 			options: [
 				{
 					type: 'dropdown',
@@ -205,7 +198,7 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action /*, bank*/) => {
+			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendBuildPipMessages(
 					action.options.mode,
 					action.options.pipMode,
@@ -215,7 +208,7 @@ class instance extends instance_skel {
 			},
 		}
 		actions['switch_to_source'] = {
-			label: 'Switch to signal source',
+			name: 'Switch to signal source',
 			options: [
 				{
 					type: 'dropdown',
@@ -227,12 +220,12 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action /*, bank*/) => {
+			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSwitchToSourceMessage(action.options.sourceNumber)
 			},
 		}
 		actions['switch_mode'] = {
-			label: 'Switch mode (T-BAR/Auto)',
+			name: 'Switch mode (T-BAR/Auto)',
 			options: [
 				{
 					type: 'dropdown',
@@ -244,12 +237,12 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action /*, bank*/) => {
+			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSwitchModeMessage(action.options.mode)
 			},
 		}
 		actions['pip_mode'] = {
-			label: 'Picture-In-Picture mode',
+			name: 'Picture-In-Picture mode',
 			options: [
 				{
 					type: 'dropdown',
@@ -261,13 +254,13 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action /*, bank*/) => {
+			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendPIPModeMessage(action.options.mode)
 			},
 		}
 
 		actions['switch_effect'] = {
-			label: 'Switch effect',
+			name: 'Switch effect',
 			options: [
 				{
 					type: 'dropdown',
@@ -279,13 +272,13 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action /*, bank*/) => {
+			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSwitchEffectMessage(action.options.mode)
 			},
 		}
 
 		actions['pip_layer'] = {
-			label: 'PIP layer (A or B)',
+			name: 'PIP layer (A or B)',
 			options: [
 				{
 					type: 'dropdown',
@@ -297,12 +290,12 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
-			callback: (action /*, bank*/) => {
+			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSwitchPipLayerMessage(action.options.layer)
 			},
 		}
 
-		this.setActions(actions)
+		this.setActionDefinitions(actions)
 	}
 
 	checkAllFeedbacks() {
@@ -314,49 +307,38 @@ class instance extends instance_skel {
 		this.checkFeedbacks('set_switch_effect')
 	}
 
-	updateConfig(config) {
-		this.debug('RGBlink mini: updateConfig')
-		let resetConnection = false
+	async configUpdated(config) {
+		this.log('debug', 'updateConfig')
+		try {
+			let resetConnection = false
 
-		if (this.config.host != config.host) {
-			resetConnection = true
+			if (this.config.host != config.host) {
+				resetConnection = true
+			}
+
+			this.config = config
+
+			if (resetConnection === true) {
+				this.apiConnector.createSocket(config.host, DEFAULT_MINI_PORT)
+			}
+
+			this.apiConnector.setPolling(config.polling)
+			this.apiConnector.setLogEveryCommand(true)
+		} catch (ex) {
+			this.updateStatus(InstanceStatus.UnknownError, ex)
+			console.log(ex)
+			this.log('error', ex)
 		}
-
-		this.config = config
-
-		if (resetConnection === true) {
-			this.apiConnector.createSocket(config.host, DEFAULT_MINI_PORT)
-		}
-
-		this.apiConnector.setPolling(config.polling)
 	}
 
-	feedback(feedback /*, bank*/) {
-		if (feedback.type == 'set_source') {
-			return feedback.options.sourceNumber == this.apiConnector.deviceStatus.liveSource
-		} else if (feedback.type == 'set_source_preview') {
-			return feedback.options.sourceNumber == this.apiConnector.deviceStatus.prevSource
-		} else if (feedback.type == 'set_mode') {
-			return feedback.options.mode == this.apiConnector.deviceStatus.switchMode
-		} else if (feedback.type == 'set_pip_mode') {
-			return feedback.options.mode == this.apiConnector.deviceStatus.pipMode
-		} else if (feedback.type == 'set_switch_effect') {
-			return feedback.options.mode == this.apiConnector.deviceStatus.switchEffect
-		} else if (feedback.type == 'set_pip_layer') {
-			return feedback.options.layer == this.apiConnector.deviceStatus.pipLayer
-		}
-
-		return false
-	}
-
-	initFeedbacks() {
+	updateFeedbacks() {
 		const feedbacks = {}
 		feedbacks['set_source'] = {
 			type: 'boolean',
-			label: 'Live source',
+			name: 'Live source',
 			description: 'Source of HDMI signal',
-			style: {
-				color: this.rgb(255, 255, 255),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
 				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
 			},
 			options: [
@@ -370,13 +352,16 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
+			callback: (feedback) => {
+				return feedback.options.sourceNumber == this.apiConnector.deviceStatus.liveSource
+			},
 		}
 		feedbacks['set_source_preview'] = {
 			type: 'boolean',
-			label: 'Preview source',
+			name: 'Preview source',
 			description: 'Source of HDMI signal',
-			style: {
-				color: this.rgb(255, 255, 255),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
 				bgcolor: this.BACKGROUND_COLOR_PREVIEW,
 			},
 			options: [
@@ -390,14 +375,17 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
+			callback: (feedback) => {
+				return feedback.options.sourceNumber == this.apiConnector.deviceStatus.prevSource
+			},
 		}
 
 		feedbacks['set_mode'] = {
 			type: 'boolean',
-			label: 'Selected switch mode',
+			name: 'Selected switch mode',
 			description: 'Mode Auto/T-Bar',
-			style: {
-				color: this.rgb(255, 255, 255),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
 				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
 			},
 			options: [
@@ -411,13 +399,16 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
+			callback: (feedback) => {
+				return feedback.options.mode == this.apiConnector.deviceStatus.switchMode
+			},
 		}
 		feedbacks['set_pip_mode'] = {
 			type: 'boolean',
-			label: 'Selected PIP mode',
+			name: 'Selected PIP mode',
 			description: 'Picture-In-Picture mode',
-			style: {
-				color: this.rgb(255, 255, 255),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
 				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
 			},
 			options: [
@@ -431,14 +422,17 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
+			callback: (feedback) => {
+				return feedback.options.mode == this.apiConnector.deviceStatus.pipMode
+			},
 		}
 
 		feedbacks['set_pip_layer'] = {
 			type: 'boolean',
-			label: 'Selected PIP layer',
+			name: 'Selected PIP layer',
 			description: 'PIP layer (A or B)',
-			style: {
-				color: this.rgb(255, 255, 255),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
 				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
 			},
 			options: [
@@ -452,13 +446,16 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
+			callback: (feedback) => {
+				return feedback.options.layer == this.apiConnector.deviceStatus.pipLayer
+			},
 		}
 		feedbacks['set_switch_effect'] = {
 			type: 'boolean',
-			label: 'Selected switch effect',
+			name: 'Selected switch effect',
 			description: 'Switch effect between sources/streams',
-			style: {
-				color: this.rgb(255, 255, 255),
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
 				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
 			},
 			options: [
@@ -472,35 +469,44 @@ class instance extends instance_skel {
 					minChoicesForSearch: 0,
 				},
 			],
+			callback: (feedback) => {
+				return feedback.options.mode == this.apiConnector.deviceStatus.switchEffect
+			},
 		}
 
 		this.setFeedbackDefinitions(feedbacks)
 	}
 
-	initPresets() {
+	updatePresets() {
 		let presets = []
 		for (var i = 1; i <= 4; i++) {
 			presets.push({
+				type: 'button',
 				category: 'Select source on live output',
-				bank: {
-					style: 'text',
+				name: 'Live source\\n' + i,
+				style: {
 					text: 'Live source\\n' + i,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 				},
-				actions: [
+				steps: [
 					{
-						action: 'switch_mode_and_source',
-						options: {
-							sourceNumber: i,
-							mode: SWITCH_MODE_AUTO,
-						},
+						down: [
+							{
+								actionId: 'switch_mode_and_source',
+								options: {
+									sourceNumber: i,
+									mode: SWITCH_MODE_AUTO,
+								},
+							},
+						],
+						up: [],
 					},
 				],
 				feedbacks: [
 					{
-						type: 'set_source',
+						feedbackId: 'set_source',
 						options: {
 							sourceNumber: i,
 						},
@@ -514,26 +520,32 @@ class instance extends instance_skel {
 		}
 		for (i = 1; i <= 4; i++) {
 			presets.push({
+				type: 'button',
 				category: 'Select source on preview',
-				bank: {
-					style: 'text',
+				name: 'Preview source\\n' + i,
+				style: {
 					text: 'Preview source\\n' + i,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 				},
-				actions: [
+				steps: [
 					{
-						action: 'switch_mode_and_source',
-						options: {
-							sourceNumber: i,
-							mode: SWITCH_MODE_TBAR,
-						},
+						down: [
+							{
+								actionId: 'switch_mode_and_source',
+								options: {
+									sourceNumber: i,
+									mode: SWITCH_MODE_TBAR,
+								},
+							},
+						],
+						up: [],
 					},
 				],
 				feedbacks: [
 					{
-						type: 'set_source_preview',
+						feedbackId: 'set_source_preview',
 						options: {
 							sourceNumber: i,
 						},
@@ -547,25 +559,31 @@ class instance extends instance_skel {
 		}
 		for (i = 1; i <= 4; i++) {
 			presets.push({
+				type: 'button',
 				category: 'Select source',
-				bank: {
-					style: 'text',
+				name: 'Source\\n' + i,
+				style: {
 					text: 'Source\\n' + i,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 				},
-				actions: [
+				steps: [
 					{
-						action: 'switch_to_source',
-						options: {
-							sourceNumber: i,
-						},
+						down: [
+							{
+								actionId: 'switch_to_source',
+								options: {
+									sourceNumber: i,
+								},
+							},
+						],
+						up: [],
 					},
 				],
 				feedbacks: [
 					{
-						type: 'set_source_preview',
+						feedbackId: 'set_source_preview',
 						options: {
 							sourceNumber: i,
 						},
@@ -575,7 +593,7 @@ class instance extends instance_skel {
 						},
 					},
 					{
-						type: 'set_source',
+						feedbackId: 'set_source',
 						options: {
 							sourceNumber: i,
 						},
@@ -589,90 +607,115 @@ class instance extends instance_skel {
 		}
 
 		presets.push({
+			type: 'button',
 			category: 'PIP examples',
-			bank: {
-				style: 'text',
+			name: 'PIP center\\nPreview\\nSrc 1 + 2',
+			style: {
 				text: 'PIP center\\nPreview\\nSrc 1 + 2',
 				size: 'auto',
 				color: this.TEXT_COLOR,
 				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'build_pip_sources_and_target',
-					options: {
-						mode: SWITCH_MODE_TBAR,
-						pipMode: 1,
-						sourceNumberA: 1,
-						sourceNumberB: 2,
-					},
+					down: [
+						{
+							actionId: 'build_pip_sources_and_target',
+							options: {
+								mode: SWITCH_MODE_TBAR,
+								pipMode: 1,
+								sourceNumberA: 1,
+								sourceNumberB: 2,
+							},
+						},
+					],
+					up: [],
 				},
 			],
 		})
 		presets.push({
+			type: 'button',
 			category: 'PIP examples',
-			bank: {
-				style: 'text',
+			name: 'PIP left top\\nPreview\\nSrc 1 + 2',
+			style: {
 				text: 'PIP left top\\nPreview\\nSrc 1 + 2',
 				size: 'auto',
 				color: this.TEXT_COLOR,
 				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'build_pip_sources_and_target',
-					options: {
-						mode: SWITCH_MODE_TBAR,
-						pipMode: 2,
-						sourceNumberA: 1,
-						sourceNumberB: 2,
-					},
+					down: [
+						{
+							actionId: 'build_pip_sources_and_target',
+							options: {
+								mode: SWITCH_MODE_TBAR,
+								pipMode: 2,
+								sourceNumberA: 1,
+								sourceNumberB: 2,
+							},
+						},
+					],
+					up: [],
 				},
 			],
+			feedbacks: [],
 		})
 		presets.push({
+			type: 'button',
 			category: 'PIP examples',
-			bank: {
-				style: 'text',
+			name: 'PIP right top\\nLive output\\nSrc 1 + 2',
+			style: {
 				text: 'PIP right top\\nLive output\\nSrc 1 + 2',
 				size: 'auto',
 				color: this.TEXT_COLOR,
 				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'build_pip_sources_and_target',
-					options: {
-						mode: SWITCH_MODE_AUTO,
-						pipMode: 3,
-						sourceNumberA: 1,
-						sourceNumberB: 2,
-					},
+					down: [
+						{
+							actionId: 'build_pip_sources_and_target',
+							options: {
+								mode: SWITCH_MODE_AUTO,
+								pipMode: 3,
+								sourceNumberA: 1,
+								sourceNumberB: 2,
+							},
+						},
+					],
+					up: [],
 				},
 			],
 		})
 
 		for (var id in PIP_MODES) {
 			presets.push({
+				type: 'button',
 				category: 'PIP mode',
-				bank: {
-					style: 'text',
+				name: 'PIP mode\\n' + PIP_MODES[id],
+				style: {
 					text: 'PIP mode\\n' + PIP_MODES[id],
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 				},
-				actions: [
+				steps: [
 					{
-						action: 'pip_mode',
-						options: {
-							mode: id,
-						},
+						down: [
+							{
+								actionId: 'pip_mode',
+								options: {
+									mode: id,
+								},
+							},
+						],
+						up: [],
 					},
 				],
 				feedbacks: [
 					{
-						type: 'set_pip_mode',
+						feedbackId: 'set_pip_mode',
 						options: {
 							mode: id,
 						},
@@ -686,25 +729,31 @@ class instance extends instance_skel {
 		}
 
 		presets.push({
+			type: 'button',
 			category: 'PIP layer',
-			bank: {
-				style: 'text',
+			name: 'PIP layer\\nA',
+			style: {
 				text: 'PIP layer\\nA',
 				size: 'auto',
 				color: this.TEXT_COLOR,
 				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'pip_layer',
-					options: {
-						layer: PIP_LAYER_A,
-					},
+					down: [
+						{
+							actionId: 'pip_layer',
+							options: {
+								layer: PIP_LAYER_A,
+							},
+						},
+					],
+					up: [],
 				},
 			],
 			feedbacks: [
 				{
-					type: 'set_pip_layer',
+					feedbackId: 'set_pip_layer',
 					options: {
 						layer: PIP_LAYER_A,
 					},
@@ -716,25 +765,31 @@ class instance extends instance_skel {
 			],
 		})
 		presets.push({
+			type: 'button',
 			category: 'PIP layer',
-			bank: {
-				style: 'text',
+			name: 'PIP layer\\nB',
+			style: {
 				text: 'PIP layer\\nB',
 				size: 'auto',
 				color: this.TEXT_COLOR,
 				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'pip_layer',
-					options: {
-						layer: PIP_LAYER_B,
-					},
+					down: [
+						{
+							actionId: 'pip_layer',
+							options: {
+								layer: PIP_LAYER_B,
+							},
+						},
+					],
+					up: [],
 				},
 			],
 			feedbacks: [
 				{
-					type: 'set_pip_layer',
+					feedbackId: 'set_pip_layer',
 					options: {
 						layer: PIP_LAYER_B,
 					},
@@ -747,25 +802,31 @@ class instance extends instance_skel {
 		})
 
 		presets.push({
+			type: 'button',
 			category: 'Select switch mode (Auto / T-BAR)',
-			bank: {
-				style: 'text',
+			name: 'Switch mode\\nAuto',
+			style: {
 				text: 'Switch mode\\nAuto',
 				size: 'auto',
 				color: this.TEXT_COLOR,
 				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'switch_mode',
-					options: {
-						mode: SWITCH_MODE_AUTO,
-					},
+					down: [
+						{
+							actionId: 'switch_mode',
+							options: {
+								mode: SWITCH_MODE_AUTO,
+							},
+						},
+					],
+					up: [],
 				},
 			],
 			feedbacks: [
 				{
-					type: 'set_mode',
+					feedbackId: 'set_mode',
 					options: {
 						mode: SWITCH_MODE_AUTO,
 					},
@@ -777,25 +838,31 @@ class instance extends instance_skel {
 			],
 		})
 		presets.push({
+			type: 'button',
 			category: 'Select switch mode (Auto / T-BAR)',
-			bank: {
-				style: 'text',
+			name: 'Switch mode\\nT-BAR',
+			style: {
 				text: 'Switch mode\\nT-BAR',
 				size: 'auto',
 				color: this.TEXT_COLOR,
 				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'switch_mode',
-					options: {
-						mode: SWITCH_MODE_TBAR,
-					},
+					down: [
+						{
+							actionId: 'switch_mode',
+							options: {
+								mode: SWITCH_MODE_TBAR,
+							},
+						},
+					],
+					up: [],
 				},
 			],
 			feedbacks: [
 				{
-					type: 'set_mode',
+					feedbackId: 'set_mode',
 					options: {
 						mode: SWITCH_MODE_TBAR,
 					},
@@ -809,8 +876,10 @@ class instance extends instance_skel {
 
 		for (id in SWITCH_EFFECT) {
 			presets.push({
+				type: 'button',
 				category: 'Switch effect',
-				bank: {
+				name: SWITCH_EFFECT[id],
+				style: {
 					style: 'png',
 					size: 'auto',
 					color: this.TEXT_COLOR,
@@ -818,17 +887,22 @@ class instance extends instance_skel {
 					png64: SWITCH_EFFECT_ICONS[id],
 					pngalignment: 'center:center',
 				},
-				actions: [
+				steps: [
 					{
-						action: 'switch_effect',
-						options: {
-							mode: id,
-						},
+						down: [
+							{
+								actionId: 'switch_effect',
+								options: {
+									mode: id,
+								},
+							},
+						],
+						up: [],
 					},
 				],
 				feedbacks: [
 					{
-						type: 'set_switch_effect',
+						feedbackId: 'set_switch_effect',
 						options: {
 							mode: id,
 						},
@@ -842,19 +916,27 @@ class instance extends instance_skel {
 		}
 
 		let showEffectPreset = {
+			type: 'button',
 			category: 'Switch effect',
-			bank: {
+			name: 'autodetect effect',
+			style: {
 				style: 'png',
 				text: 'autodetect effect',
 				size: 'auto',
 				color: this.TEXT_COLOR,
 				bgcolor: this.BACKGROUND_COLOR_DEFAULT,
 			},
+			steps: [
+				{
+					down: [],
+					up: [],
+				},
+			],
 			feedbacks: [],
 		}
 		for (id in SWITCH_EFFECT) {
 			showEffectPreset.feedbacks.push({
-				type: 'set_switch_effect',
+				feedbackId: 'set_switch_effect',
 				options: {
 					mode: id,
 				},
@@ -872,5 +954,16 @@ class instance extends instance_skel {
 		this.setPresetDefinitions(presets)
 	}
 }
+runEntrypoint(MiniModuleInstance, UpgradeScripts)
 
-exports = module.exports = instance
+/*
+maybe do it in future:
+* switch effect - better png, with transparency
+* switch time setting (from 0.5s to 5s)
+
+usefull commands
+* yarn format
+* yarn headless
+* yarn dev-headless
+
+*/

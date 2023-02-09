@@ -1,26 +1,21 @@
 {
   "name": "rgblink-mini",
-  "version": "1.0.2",
-  "description": "RGBlink mini/mini+",
-  "manufacturer": "RGBlink",
-  "product": "mini/mini+",
-  "shortname": "mini",
-  "main": "index.js",
-  "keywords": [],
+  "version": "2.0.0",
+  "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "prettier -w ."
   },
-  "author": "Marcin Gumułka <marcingum@gmail.com>; Krzysztof Foszcz <foszczkrzysztof@gmail.com>",
   "license": "MIT",
-  "devDependencies": {
-    "eslint": "^8.21.0"
-  },
-  "homepage": "https://github.com/bitfocus/companion-module-rgblink-mini",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bitfocus/companion-module-rgblink-mini.git"
   },
-  "bugs": {
-    "url": "https://github.com/bitfocus/companion-module-rgblink-mini/issues"
-  }
+  "dependencies": {
+    "@companion-module/base": "~1.0.1"
+  },
+  "devDependencies": {
+    "@companion-module/tools": "^0.5.1",
+    "eslint": "^8.32.0"
+  },
+  "prettier": "@companion-module/tools/.prettierrc.json"
 }
