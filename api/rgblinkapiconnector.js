@@ -130,7 +130,7 @@ class RGBLinkApiConnector {
 	sentCommandStorage = new SentCommandStorage()
 	pollingQueue = []
 
-	constructor(config) {
+	constructor(/*ApiConfig*/ config) {
 		this.config = config
 		var self = this
 		if (this.config && this.config.host) {

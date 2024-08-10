@@ -120,7 +120,12 @@ class MiniModuleInstance extends InstanceBase {
 	initApiConnector() {
 		let self = this
 		this.apiConnector = new RGBLinkMiniConnector(
-			new ApiConfig(this.config.host, this.config.port ? this.config.port : 1000, this.config.polling, this.config.logEveryCommand ? this.config.logEveryCommand : false)
+			new ApiConfig(
+				this.config.host,
+				this.config.port ? this.config.port : 1000,
+				this.config.polling,
+				this.config.logEveryCommand ? this.config.logEveryCommand : false
+			)
 		)
 		this.apiConnector.enableLog(this)
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DEVICE_STATE_CHANGED, (changedEvents) => {
