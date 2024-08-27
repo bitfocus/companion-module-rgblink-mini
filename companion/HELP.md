@@ -1,4 +1,4 @@
-## RGBlink mini
+# RGBlink mini
 
 Tested with mini model, with firmware MCU VER 1.14, VIDEO VER 1.57
 
@@ -7,7 +7,7 @@ Should also work with mini-pro models, but without support for record and views.
 
 Devices must be controlled over a network, USB control is NOT supported.
 
-**Available commands for mini**
+## **Available commands for mini**
 
 - Select source and target (source - input 1/2/3/4, target - Live output or preveiw)
 - Build PIP from selected sources (select PIP mode and two sources for PIP, and target - live output or preview)
@@ -17,7 +17,7 @@ Devices must be controlled over a network, USB control is NOT supported.
 - Set switch effect
 - Set PIP layer (A or B)
 
-**Available feedbacks (current state) for mini**
+## **Available feedbacks (current state) for mini**
 
 - Live source (1/2/3/4 - for PIP off or layer A when PIP on)
 - Preview source (1/2/3/4 - for PIP off or layer A when PIP on)

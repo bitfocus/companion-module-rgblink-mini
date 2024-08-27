@@ -3,3 +3,8 @@ package-lock.json
 /pkg
 /pkg.tgz
 /.idea
+.eslintrc
+DEBUG-INSPECT
+DEBUG-PACKAGED
+DEBUG-PACKAGE
+.yarn/install-state.gz
