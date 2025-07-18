@@ -20,6 +20,7 @@ const SOURCE_CHOICES_PART = [
 	{ id: '2', label: '2' },
 	{ id: '3', label: '3' },
 	{ id: '4', label: '4' },
+	{ id: '5', label: '5 - EXPERIMENTAL' },
 ]
 
 const SWITCH_MODE_CHOICES_PART = [
@@ -496,13 +497,13 @@ class MiniModuleInstance extends InstanceBase {
 
 	updatePresets() {
 		let presets = []
-		for (var i = 1; i <= 4; i++) {
+		for (const item of SOURCE_CHOICES_PART) {
 			presets.push({
 				type: 'button',
 				category: 'Select source on live output',
-				name: 'Live source\\n' + i,
+				name: 'Live source\\n' + item.label,
 				style: {
-					text: 'Live source\\n' + i,
+					text: 'Live source\\n' + item.label,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -513,7 +514,7 @@ class MiniModuleInstance extends InstanceBase {
 							{
 								actionId: 'switch_mode_and_source',
 								options: {
-									sourceNumber: i,
+									sourceNumber: item.id,
 									mode: SWITCH_MODE_AUTO,
 								},
 							},
@@ -525,7 +526,7 @@ class MiniModuleInstance extends InstanceBase {
 					{
 						feedbackId: 'set_source',
 						options: {
-							sourceNumber: i,
+							sourceNumber: item.id,
 						},
 						style: {
 							color: this.TEXT_COLOR,
@@ -535,13 +536,13 @@ class MiniModuleInstance extends InstanceBase {
 				],
 			})
 		}
-		for (i = 1; i <= 4; i++) {
+		for (const item of SOURCE_CHOICES_PART) {
 			presets.push({
 				type: 'button',
 				category: 'Select source on preview',
-				name: 'Preview source\\n' + i,
+				name: 'Preview source\\n' + item.label,
 				style: {
-					text: 'Preview source\\n' + i,
+					text: 'Preview source\\n' + item.label,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -552,7 +553,7 @@ class MiniModuleInstance extends InstanceBase {
 							{
 								actionId: 'switch_mode_and_source',
 								options: {
-									sourceNumber: i,
+									sourceNumber: item.id,
 									mode: SWITCH_MODE_TBAR,
 								},
 							},
@@ -564,7 +565,7 @@ class MiniModuleInstance extends InstanceBase {
 					{
 						feedbackId: 'set_source_preview',
 						options: {
-							sourceNumber: i,
+							sourceNumber: item.id,
 						},
 						style: {
 							color: this.TEXT_COLOR,
@@ -574,13 +575,13 @@ class MiniModuleInstance extends InstanceBase {
 				],
 			})
 		}
-		for (i = 1; i <= 4; i++) {
+		for (const item of SOURCE_CHOICES_PART) {
 			presets.push({
 				type: 'button',
 				category: 'Select source',
-				name: 'Source\\n' + i,
+				name: 'Source\\n' + item.label,
 				style: {
-					text: 'Source\\n' + i,
+					text: 'Source\\n' + item.label,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -591,7 +592,7 @@ class MiniModuleInstance extends InstanceBase {
 							{
 								actionId: 'switch_to_source',
 								options: {
-									sourceNumber: i,
+									sourceNumber: item.id,
 								},
 							},
 						],
@@ -602,7 +603,7 @@ class MiniModuleInstance extends InstanceBase {
 					{
 						feedbackId: 'set_source_preview',
 						options: {
-							sourceNumber: i,
+							sourceNumber: item.id,
 						},
 						style: {
 							color: this.TEXT_COLOR,
@@ -612,7 +613,7 @@ class MiniModuleInstance extends InstanceBase {
 					{
 						feedbackId: 'set_source',
 						options: {
-							sourceNumber: i,
+							sourceNumber: item.id,
 						},
 						style: {
 							color: this.TEXT_COLOR,

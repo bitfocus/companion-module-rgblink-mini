@@ -96,7 +96,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 	}
 
 	sendSwitchToSourceMessage(source) {
-		if (source >= 1 && source <= 4) {
+		if (source >= 1 && source <= 5) {
 			let sourceHex = this.byteToTwoSignHex(source - 1)
 			this.sendCommand('75', '02', '00', sourceHex, '00')
 		} else {
@@ -185,7 +185,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 					// Signal source switching Settings
 					// 0x02(Write), 0x03(Read)
 					let src = parseInt(DAT3) + 1
-					if (src >= 1 && src <= 4) {
+					if (src >= 1 && src <= 5) {
 						this.emitConnectionStatusOK()
 						this.deviceStatus.liveSource = src
 						return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource)
