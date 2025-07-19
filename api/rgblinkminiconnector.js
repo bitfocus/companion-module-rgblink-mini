@@ -9,6 +9,9 @@ const INPUT_SIGNAL_CHANNEL_SDI = 1
 const PIP_LAYER_A = 0
 const PIP_LAYER_B = 1
 
+const OUTPUT_PST_PREVIEW = 0
+const OUTPUT_PGM_PROGRAM = 1
+
 const PIP_MODE_OFF = 0
 const PIP_MODES = {
 	0: 'PIP off',
@@ -51,7 +54,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		switchEffect: undefined,
 		pipMode: undefined,
 		pipLayer: undefined,
-		channelsForInput: []
+		channelsForInput: [],
+		lastSourceOnOutput: [], // czy to duplikat dla prevSource i liveSource?
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -108,9 +112,18 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 	}
 
 	sendSwitchToSourceMessage(source) {
+		this.sendSwitchToSourceToOutputMessage(source, OUTPUT_PST_PREVIEW)
+	}
+
+	sendSwitchToSourceToOutputMessage(source, output) {
 		if (this.isSourceNumberValid(source)) {
 			let sourceHex = this.byteToTwoSignHex(source - 1)
-			this.sendCommand('75', '02', '00', sourceHex, '00')
+			if (this.isOutputValid(output)) {
+				let outputHex = this.byteToTwoSignHex(output)
+				this.sendCommand('75', '02', '00', sourceHex, outputHex)
+			} else {
+				this.myWarn('Bad output:' + output)
+			}
 		} else {
 			this.myWarn('Bad source:' + source)
 		}
@@ -189,6 +202,10 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		return (type == INPUT_SIGNAL_CHANNEL_HDMI || type == INPUT_SIGNAL_CHANNEL_SDI)
 	}
 
+	isOutputValid(output) {
+		return (output == OUTPUT_PST_PREVIEW || output == OUTPUT_PGM_PROGRAM)
+	}
+
 	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
 		let redeableMsg = [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4].join(' ')
 		try {
@@ -235,6 +252,12 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 					if (this.isSourceNumberValid(src)) {
 						this.emitConnectionStatusOK()
 						this.deviceStatus.liveSource = src
+						// lets try
+						let output = parseInt(DAT4)
+						if (output == OUTPUT_PST_PREVIEW || output == OUTPUT_PGM_PROGRAM) {
+							this.deviceStatus.lastSourceOnOutput[output] = src
+						}
+						// lets try - end
 						return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource)
 					}
 				} else if (DAT1 == '1A' || DAT1 == '1B') {
@@ -303,3 +326,5 @@ module.exports.PIP_MODES = PIP_MODES
 module.exports.SWITCH_EFFECT = SWITCH_EFFECT
 module.exports.INPUT_SIGNAL_CHANNEL_HDMI = INPUT_SIGNAL_CHANNEL_HDMI
 module.exports.INPUT_SIGNAL_CHANNEL_SDI = INPUT_SIGNAL_CHANNEL_SDI
+module.exports.OUTPUT_PST_PREVIEW = OUTPUT_PST_PREVIEW
+module.exports.OUTPUT_PGM_PROGRAM = OUTPUT_PGM_PROGRAM

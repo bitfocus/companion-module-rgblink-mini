@@ -13,7 +13,9 @@ const {
 	PIP_MODES,
 	SWITCH_EFFECT,
 	INPUT_SIGNAL_CHANNEL_HDMI,
-	INPUT_SIGNAL_CHANNEL_SDI
+	INPUT_SIGNAL_CHANNEL_SDI,
+	OUTPUT_PST_PREVIEW,
+	OUTPUT_PGM_PROGRAM,
 } = require('./api/rgblinkminiconnector')
 const { ApiConfig } = require('./api/rgblinkapiconnector')
 
@@ -48,6 +50,11 @@ const PART_CHOICES_PIP_LAYERS = [
 const INPUT_CHANNEL_CHOICES_PART = [
 	{ id: INPUT_SIGNAL_CHANNEL_HDMI, label: '0 - HDMI' },
 	{ id: INPUT_SIGNAL_CHANNEL_SDI, label: '1 - SDI' },
+]
+
+const SIGNAL_SWITCH_OUTPUT_CHOICES_PART = [
+	{ id: OUTPUT_PST_PREVIEW, label: 'PST (Preview)' },
+	{ id: OUTPUT_PGM_PROGRAM, label: 'PGM (Program)' },
 ]
 
 class MiniModuleInstance extends InstanceBase {
@@ -233,7 +240,7 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 		actions['switch_to_source'] = {
-			name: 'Switch to signal source',
+			name: 'Switch signal source',
 			options: [
 				{
 					type: 'dropdown',
@@ -322,7 +329,8 @@ class MiniModuleInstance extends InstanceBase {
 
 		// HDMI or SDI
 		actions['switch_input_signal_channel'] = {
-			name: 'EXPERIMENTAL: Switch input signal channel (HDMI/SDI), if hardware support id (mini-iso, mini-edge SDI, mini-mx SDI)',
+			name: 'EXPERIMENTAL: Switch input signal channel (HDMI/SDI)',
+			description: 'Based on API v1.0.6 20250611, mini-iso, mini-edge SDI, mini-mx SDI',
 			options: [
 				{
 					type: 'dropdown',
@@ -348,6 +356,34 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		actions['switch_to_source_to_output'] = {
+			name: 'EXPERIMENTAL Switch signal source (PST or PGM)',
+			description: 'Based on API v1.0.6 20250611, is it possible on mini Series:mini-pro,mini-pro v3,mini-ISO',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source number',
+					id: 'sourceNumber',
+					default: '1',
+					tooltip: 'Choose source number, which should be selected',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Choose output (PST or PGM)',
+					id: 'output',
+					default: OUTPUT_PST_PREVIEW,
+					tooltip: 'Choose output (preview or program)',
+					choices: SIGNAL_SWITCH_OUTPUT_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSwitchToSourceToOutputMessage(action.options.sourceNumber, action.options.output)
+			},
+		}
+
 		this.setActionDefinitions(actions)
 	}
 
@@ -359,6 +395,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_pip_layer')
 		this.checkFeedbacks('set_switch_effect')
 		this.checkFeedbacks('set_switch_input_signal_channel')
+		this.checkFeedbacks('set_switch_to_source_to_output')
 	}
 
 	async configUpdated(config) {
@@ -530,7 +567,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		feedbacks['set_switch_input_signal_channel'] = {
 			type: 'boolean',
-			name: 'Input channel (HDMI/SDI) linked to button',
+			name: 'EXPERIMENTAL Input channel (HDMI/SDI) linked to button',
 			description: 'Assigned channel (HDMI/SDI) for button',
 			defaultStyle: {
 				color: combineRgb(255, 255, 255),
@@ -560,6 +597,44 @@ class MiniModuleInstance extends InstanceBase {
 				return (feedback.options.type == this.apiConnector.deviceStatus.channelsForInput[feedback.options.sourceNumber])
 			},
 		}
+
+		feedbacks['set_switch_to_source_to_output'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL Source switched to output',
+			description: 'Source switched to output (PST or PGM)',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Input source number',
+					id: 'sourceNumber',
+					default: '1',
+					tooltip: 'Choose source number to test',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Choose output (PST or PGM)',
+					id: 'output',
+					default: OUTPUT_PST_PREVIEW,
+					tooltip: 'Choose output (preview or program)',
+					choices: SIGNAL_SWITCH_OUTPUT_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				this.log(feedback.options.sourceNumber)
+				this.log(feedback.options.output)
+				this.log(this.apiConnector.deviceStatus.lastSourceOnOutput)
+				return (feedback.options.sourceNumber == this.apiConnector.deviceStatus.lastSourceOnOutput[feedback.options.output])
+			},
+		}
+
+
 
 		this.setFeedbackDefinitions(feedbacks)
 	}
@@ -1041,10 +1116,10 @@ class MiniModuleInstance extends InstanceBase {
 			for (const item2 of INPUT_CHANNEL_CHOICES_PART) {
 				presets.push({
 					type: 'button',
-					category: 'Select source channel (HDMI/SDI)',
-					name: 'Source ' + item.label + '\\n' + item2.label,
+					category: 'EXPERIMENTAL Select source channel (HDMI/SDI)',
+					name: 'EXPERIMENTAL Source ' + item.label + '\\n' + item2.label,
 					style: {
-						text: 'Source ' + item.label + '\\n' + item2.label,
+						text: 'EXPERIMENTAL Source ' + item.label + '\\n' + item2.label,
 						size: 'auto',
 						color: this.TEXT_COLOR,
 						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -1069,6 +1144,49 @@ class MiniModuleInstance extends InstanceBase {
 							options: {
 								sourceNumber: item.id,
 								type: item2.id,
+							},
+							style: {
+								color: this.TEXT_COLOR,
+								bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+							},
+						},
+					],
+				})
+			}
+		}
+
+		for (const item of SOURCE_CHOICES_PART) {
+			for (const item2 of SIGNAL_SWITCH_OUTPUT_CHOICES_PART) {
+				presets.push({
+					type: 'button',
+					category: 'EXPERIMENTAL Switch signal source to PST/PGM',
+					name: 'EXPERIMENTAL Source ' + item.label + '\\nto ' + item2.label,
+					style: {
+						text: 'EXPERIMENTAL Source ' + item.label + '\\nto ' + item2.label,
+						size: 'auto',
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+					},
+					steps: [
+						{
+							down: [
+								{
+									actionId: 'switch_to_source_to_output',
+									options: {
+										sourceNumber: item.id,
+										output: item2.id,
+									},
+								},
+							],
+							up: [],
+						},
+					],
+					feedbacks: [
+						{
+							feedbackId: 'set_switch_to_source_to_output',
+							options: {
+								sourceNumber: item.id,
+								output: item2.id,
 							},
 							style: {
 								color: this.TEXT_COLOR,
