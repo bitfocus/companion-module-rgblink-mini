@@ -3,6 +3,9 @@ const { RGBLinkApiConnector, PollingCommand, ApiConfig } = require('./rgblinkapi
 const SWITCH_MODE_AUTO = 0
 const SWITCH_MODE_TBAR = 1
 
+const INPUT_SIGNAL_CHANNEL_HDMI = 0
+const INPUT_SIGNAL_CHANNEL_SDI = 1
+
 const PIP_LAYER_A = 0
 const PIP_LAYER_B = 1
 
@@ -48,6 +51,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		switchEffect: undefined,
 		pipMode: undefined,
 		pipLayer: undefined,
+		channelsForInput: []
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -83,6 +87,14 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		commands.push(new PollingCommand('78', '07', '00', '00', '00')) // asking about switch effect
 		commands.push(new PollingCommand('75', '1B', '00', '00', '00')) // asking about PIP layer (A or B)
 		commands.push(new PollingCommand('F1', '40', '01', '00', '00')) // asking about special status 22
+
+		// mini-iso、mini-edge SDI、mini-mx SDI, but what returns mini/mini+/mini pro ?
+		// commands.push(new PollingCommand('73', '19', '00', '00', '00')) // channel type for input(HDMI/SDI)
+		// commands.push(new PollingCommand('73', '19', '01', '00', '00')) // channel type for input(HDMI/SDI)
+		// commands.push(new PollingCommand('73', '19', '02', '00', '00')) // channel type for input(HDMI/SDI)
+		// commands.push(new PollingCommand('73', '19', '03', '00', '00')) // channel type for input(HDMI/SDI)
+		// commands.push(new PollingCommand('73', '19', '04', '00', '00')) // channel type for input(HDMI/SDI)
+
 		return commands
 	}
 
@@ -96,7 +108,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 	}
 
 	sendSwitchToSourceMessage(source) {
-		if (source >= 1 && source <= 5) {
+		if (this.isSourceNumberValid(source)) {
 			let sourceHex = this.byteToTwoSignHex(source - 1)
 			this.sendCommand('75', '02', '00', sourceHex, '00')
 		} else {
@@ -143,6 +155,20 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 	}
 
+	sendSwitchInputSignalChannel(source, type) {
+		if (this.isSourceNumberValid(source)) {
+			let sourceHex = this.byteToTwoSignHex(source - 1)
+			if (this.isChannelTypeValid(type)) {
+				let typeHex = this.byteToTwoSignHex(type)
+				this.sendCommand('73', '18', sourceHex, typeHex, '00')
+			} else {
+				this.myWarn('Bad type:' + type)
+			}
+		} else {
+			this.myWarn('Bad source:' + source)
+		}
+	}
+
 	consume22(message) {
 		let prev = message[0]
 		if (prev <= 3) {
@@ -153,6 +179,14 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		if (src <= 3) {
 			this.deviceStatus.liveSource = src + 1
 		}
+	}
+
+	isSourceNumberValid(src) {
+		return (src >= 1 && src <= 5)
+	}
+
+	isChannelTypeValid(type) {
+		return (type == INPUT_SIGNAL_CHANNEL_HDMI || type == INPUT_SIGNAL_CHANNEL_SDI)
 	}
 
 	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
@@ -179,13 +213,26 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 					this.emitConnectionStatusOK()
 					return this.logFeedback(redeableMsg, 'Device connected')
 				}
+			} else if (CMD == '73') {
+				// 0x73 Switch input signal channel: HDMI/SDI
+				if (DAT1 == '18' || DAT1 == '19') {
+					// 0x18 Set input signal channel
+					// 0x19 Read input signal channel
+					let src = parseInt(DAT2) + 1
+					let type = parseInt(DAT3)
+					if (this.isSourceNumberValid(src) && this.isChannelTypeValid(type)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.channelsForInput[src] = type
+						return this.logFeedback(redeableMsg, 'Input ' + src + ' use channel ' + type + ' (' + (type == 1 ? 'HDMI' : 'SDI') + ')')
+					}
+				}
 			} else if (CMD == '75') {
 				// 0x75 Read/write video processor information
 				if (DAT1 == '02' || DAT1 == '03') {
 					// Signal source switching Settings
 					// 0x02(Write), 0x03(Read)
 					let src = parseInt(DAT3) + 1
-					if (src >= 1 && src <= 5) {
+					if (this.isSourceNumberValid(src)) {
 						this.emitConnectionStatusOK()
 						this.deviceStatus.liveSource = src
 						return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource)
@@ -254,3 +301,5 @@ module.exports.PIP_LAYER_B = PIP_LAYER_B
 module.exports.PIP_MODE_OFF = PIP_MODE_OFF
 module.exports.PIP_MODES = PIP_MODES
 module.exports.SWITCH_EFFECT = SWITCH_EFFECT
+module.exports.INPUT_SIGNAL_CHANNEL_HDMI = INPUT_SIGNAL_CHANNEL_HDMI
+module.exports.INPUT_SIGNAL_CHANNEL_SDI = INPUT_SIGNAL_CHANNEL_SDI

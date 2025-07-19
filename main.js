@@ -12,6 +12,8 @@ const {
 	PIP_MODE_OFF,
 	PIP_MODES,
 	SWITCH_EFFECT,
+	INPUT_SIGNAL_CHANNEL_HDMI,
+	INPUT_SIGNAL_CHANNEL_SDI
 } = require('./api/rgblinkminiconnector')
 const { ApiConfig } = require('./api/rgblinkapiconnector')
 
@@ -41,6 +43,11 @@ for (let id in SWITCH_EFFECT) {
 const PART_CHOICES_PIP_LAYERS = [
 	{ id: PIP_LAYER_A, label: 'A (main/first)' },
 	{ id: PIP_LAYER_B, label: 'B (additional/second)' },
+]
+
+const INPUT_CHANNEL_CHOICES_PART = [
+	{ id: INPUT_SIGNAL_CHANNEL_HDMI, label: '0 - HDMI' },
+	{ id: INPUT_SIGNAL_CHANNEL_SDI, label: '1 - SDI' },
 ]
 
 class MiniModuleInstance extends InstanceBase {
@@ -313,6 +320,34 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		// HDMI or SDI
+		actions['switch_input_signal_channel'] = {
+			name: 'EXPERIMENTAL: Switch input signal channel (HDMI/SDI), if hardware support id (mini-iso, mini-edge SDI, mini-mx SDI)',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Input source number',
+					id: 'sourceNumber',
+					default: '1',
+					tooltip: 'Choose source number to switch channel',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Channel type',
+					id: 'type',
+					default: INPUT_SIGNAL_CHANNEL_HDMI,
+					tooltip: 'Choose channel type: HDMI or SDI',
+					choices: INPUT_CHANNEL_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSwitchInputSignalChannel(action.options.sourceNumber, action.options.type)
+			},
+		}
+
 		this.setActionDefinitions(actions)
 	}
 
@@ -323,6 +358,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_pip_mode')
 		this.checkFeedbacks('set_pip_layer')
 		this.checkFeedbacks('set_switch_effect')
+		this.checkFeedbacks('set_switch_input_signal_channel')
 	}
 
 	async configUpdated(config) {
@@ -489,6 +525,39 @@ class MiniModuleInstance extends InstanceBase {
 			],
 			callback: (feedback) => {
 				return feedback.options.mode == this.apiConnector.deviceStatus.switchEffect
+			},
+		}
+
+		feedbacks['set_switch_input_signal_channel'] = {
+			type: 'boolean',
+			name: 'Input channel (HDMI/SDI) linked to button',
+			description: 'Assigned channel (HDMI/SDI) for button',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Input source number',
+					id: 'sourceNumber',
+					default: '1',
+					tooltip: 'Choose source number to test',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Channel type',
+					id: 'type',
+					default: INPUT_SIGNAL_CHANNEL_HDMI,
+					tooltip: 'Choose channel type: HDMI or SDI',
+					choices: INPUT_CHANNEL_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.type == this.apiConnector.deviceStatus.channelsForInput[feedback.options.sourceNumber])
 			},
 		}
 
@@ -967,6 +1036,50 @@ class MiniModuleInstance extends InstanceBase {
 				},
 			})
 		}
+
+		for (const item of SOURCE_CHOICES_PART) {
+			for (const item2 of INPUT_CHANNEL_CHOICES_PART) {
+				presets.push({
+					type: 'button',
+					category: 'Select source channel (HDMI/SDI)',
+					name: 'Source ' + item.label + '\\n' + item2.label,
+					style: {
+						text: 'Source ' + item.label + '\\n' + item2.label,
+						size: 'auto',
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+					},
+					steps: [
+						{
+							down: [
+								{
+									actionId: 'switch_input_signal_channel',
+									options: {
+										sourceNumber: item.id,
+										type: item2.id,
+									},
+								},
+							],
+							up: [],
+						},
+					],
+					feedbacks: [
+						{
+							feedbackId: 'set_switch_input_signal_channel',
+							options: {
+								sourceNumber: item.id,
+								type: item2.id,
+							},
+							style: {
+								color: this.TEXT_COLOR,
+								bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+							},
+						},
+					],
+				})
+			}
+		}
+
 		presets.push(showEffectPreset)
 
 		this.setPresetDefinitions(presets)
