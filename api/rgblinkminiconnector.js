@@ -92,12 +92,14 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		commands.push(new PollingCommand('75', '1B', '00', '00', '00')) // asking about PIP layer (A or B)
 		commands.push(new PollingCommand('F1', '40', '01', '00', '00')) // asking about special status 22
 
-		// mini-iso、mini-edge SDI、mini-mx SDI, but what returns mini/mini+/mini pro ?
-		// commands.push(new PollingCommand('73', '19', '00', '00', '00')) // channel type for input(HDMI/SDI)
-		// commands.push(new PollingCommand('73', '19', '01', '00', '00')) // channel type for input(HDMI/SDI)
-		// commands.push(new PollingCommand('73', '19', '02', '00', '00')) // channel type for input(HDMI/SDI)
-		// commands.push(new PollingCommand('73', '19', '03', '00', '00')) // channel type for input(HDMI/SDI)
-		// commands.push(new PollingCommand('73', '19', '04', '00', '00')) // channel type for input(HDMI/SDI)
+		if (this.config.pollingEdge) {
+			// mini-iso、mini-edge SDI、mini-mx SDI, but what returns mini/mini+/mini pro ?
+			commands.push(new PollingCommand('73', '19', '00', '00', '00')) // channel type for input 1 (HDMI/SDI)
+			commands.push(new PollingCommand('73', '19', '01', '00', '00')) // channel type for input 2 (HDMI/SDI)
+			commands.push(new PollingCommand('73', '19', '02', '00', '00')) // channel type for input 3 (HDMI/SDI)
+			commands.push(new PollingCommand('73', '19', '03', '00', '00')) // channel type for input 4 (HDMI/SDI)
+			commands.push(new PollingCommand('A2', '18', '00', '00', '00')) // channel type for input(HDMI/SDI)
+		}
 
 		return commands
 	}
@@ -217,7 +219,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			} else if (CMD == 'A2' && DAT1 == '18') {
 				// t-bar position update
 				this.emitConnectionStatusOK()
-				return this.logFeedback(redeableMsg, 'T-BAR position changed')
+				return this.logFeedback(redeableMsg, 'T-BAR position changed or readed')
 			}
 
 			if (CMD == '68') {

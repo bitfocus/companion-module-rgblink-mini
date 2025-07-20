@@ -100,6 +100,13 @@ class MiniModuleInstance extends InstanceBase {
 			},
 			{
 				type: 'checkbox',
+				label: 'EXPERIMENTAL: Status polling - extra for edge (ask for status every second)',
+				id: 'pollingEdge',
+				width: 12,
+				default: false,
+			},
+			{
+				type: 'checkbox',
 				label: 'Debug logging of every sent/received command (may slow down your computer)',
 				tooltip: 'test toolitp',
 				description: 'test descri',
@@ -141,6 +148,7 @@ class MiniModuleInstance extends InstanceBase {
 				this.config.host,
 				this.config.port ? this.config.port : 1000,
 				this.config.polling,
+				this.config.pollingEdge,
 				this.config.logEveryCommand ? this.config.logEveryCommand : false
 			)
 		)
@@ -416,6 +424,7 @@ class MiniModuleInstance extends InstanceBase {
 			}
 
 			this.apiConnector.setPolling(this.config.polling)
+			this.apiConnector.setPollingEdge(this.config.pollingEdge)
 			this.apiConnector.setLogEveryCommand(this.config.logEveryCommand ? this.config.logEveryCommand : false)
 		} catch (ex) {
 			this.updateStatus(InstanceStatus.UnknownError, ex)

@@ -101,12 +101,14 @@ class ApiConfig {
 	host = undefined
 	port = undefined
 	polling = undefined
+	pollingEdge = undefined 
 	logEveryCommand = undefined
 
-	constructor(host, port, polling, logEveryCommand) {
+	constructor(host, port, polling, pollingEdge, logEveryCommand) {
 		this.host = host
 		this.port = port
 		this.polling = polling
+		this.pollingEdge = pollingEdge
 		this.logEveryCommand = logEveryCommand
 	}
 }
@@ -345,6 +347,10 @@ class RGBLinkApiConnector {
 
 	setPolling(polling) {
 		this.config.polling = polling
+	}
+
+	setPollingEdge(pollingEdge) {
+		this.config.pollingEdge = pollingEdge
 	}
 
 	setLogEveryCommand(logEveryCommand) {
