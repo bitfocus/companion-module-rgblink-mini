@@ -27,6 +27,8 @@ const SOURCE_CHOICES_PART = [
 	{ id: '5', label: '5 - EXPERIMENTAL' },
 ]
 
+const SOURCE_CHOICES_PART_ONLY_FOUR = SOURCE_CHOICES_PART.slice(0, -1)
+
 const SWITCH_MODE_CHOICES_PART = [
 	{ id: SWITCH_MODE_AUTO, label: 'Quick/Auto (Live output)' },
 	{ id: SWITCH_MODE_TBAR, label: 'T-BAR (Preview)' },
@@ -48,8 +50,8 @@ const PART_CHOICES_PIP_LAYERS = [
 ]
 
 const INPUT_CHANNEL_CHOICES_PART = [
-	{ id: INPUT_SIGNAL_CHANNEL_HDMI, label: '0 - HDMI' },
-	{ id: INPUT_SIGNAL_CHANNEL_SDI, label: '1 - SDI' },
+	{ id: INPUT_SIGNAL_CHANNEL_HDMI, label: 'HDMI' },
+	{ id: INPUT_SIGNAL_CHANNEL_SDI, label: 'SDI' },
 ]
 
 const SIGNAL_SWITCH_OUTPUT_CHOICES_PART = [
@@ -347,7 +349,7 @@ class MiniModuleInstance extends InstanceBase {
 					id: 'type',
 					default: INPUT_SIGNAL_CHANNEL_HDMI,
 					tooltip: 'Choose channel type: HDMI or SDI',
-					choices: INPUT_CHANNEL_CHOICES_PART,
+					choices: SOURCE_CHOICES_PART_ONLY_FOUR,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -589,7 +591,7 @@ class MiniModuleInstance extends InstanceBase {
 					id: 'type',
 					default: INPUT_SIGNAL_CHANNEL_HDMI,
 					tooltip: 'Choose channel type: HDMI or SDI',
-					choices: INPUT_CHANNEL_CHOICES_PART,
+					choices: SOURCE_CHOICES_PART_ONLY_FOUR,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -1112,14 +1114,14 @@ class MiniModuleInstance extends InstanceBase {
 			})
 		}
 
-		for (const item of SOURCE_CHOICES_PART) {
+		for (const item of SOURCE_CHOICES_PART_ONLY_FOUR) {
 			for (const item2 of INPUT_CHANNEL_CHOICES_PART) {
 				presets.push({
 					type: 'button',
 					category: 'EXPERIMENTAL Select source channel (HDMI/SDI)',
-					name: 'EXPERIMENTAL Source ' + item.label + '\\n' + item2.label,
+					name: 'EXPERIMENTAL Source ' + item.label + '\\n- ' + item2.label,
 					style: {
-						text: 'EXPERIMENTAL Source ' + item.label + '\\n' + item2.label,
+						text: 'EXPERIMENTAL Source ' + item.label + '\\n- ' + item2.label,
 						size: 'auto',
 						color: this.TEXT_COLOR,
 						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
