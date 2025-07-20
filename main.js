@@ -24,7 +24,7 @@ const SOURCE_CHOICES_PART = [
 	{ id: '2', label: '2' },
 	{ id: '3', label: '3' },
 	{ id: '4', label: '4' },
-	{ id: '5', label: '5 - EXPERIMENTAL' },
+	{ id: '5', label: '5 (if the hardware has)' },
 ]
 
 const SOURCE_CHOICES_PART_ONLY_FOUR = SOURCE_CHOICES_PART.slice(0, -1)
@@ -393,9 +393,21 @@ class MiniModuleInstance extends InstanceBase {
 					choices: SIGNAL_SWITCH_OUTPUT_CHOICES_PART,
 					minChoicesForSearch: 0,
 				},
+				{
+					type: 'checkbox',
+					label: 'EXPERIMENTAL: IF PGM, try to move previous PGM to PST',
+					id: 'movePgmToPst',
+					width: 12,
+					default: false,
+				},
 			],
 			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSwitchToSourceToOutputMessage(action.options.sourceNumber, action.options.output)
+				if (action.options.output == OUTPUT_PGM_PROGRAM && action.options.movePgmToPst) {
+					if (this.apiConnector.deviceStatus.lastSourceOnOutput[OUTPUT_PGM_PROGRAM]) {
+						this.apiConnector.sendSwitchToSourceToOutputMessage(this.apiConnector.deviceStatus.lastSourceOnOutput[OUTPUT_PGM_PROGRAM], OUTPUT_PST_PREVIEW)
+					}
+				}
 			},
 		}
 
