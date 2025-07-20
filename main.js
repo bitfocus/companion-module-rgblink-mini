@@ -24,7 +24,7 @@ const SOURCE_CHOICES_PART = [
 	{ id: '2', label: '2' },
 	{ id: '3', label: '3' },
 	{ id: '4', label: '4' },
-	{ id: '5', label: '5 (if the hardware has)' },
+	{ id: '5', label: '5 (BETA - if the hardware has)' },
 ]
 
 const SOURCE_CHOICES_PART_ONLY_FOUR = SOURCE_CHOICES_PART.slice(0, -1)
@@ -98,14 +98,14 @@ class MiniModuleInstance extends InstanceBase {
 			},
 			{
 				type: 'checkbox',
-				label: 'Status polling (ask for status every second)',
+				label: 'Status polling (requests status every second)',
 				id: 'polling',
 				width: 12,
 				default: true,
 			},
 			{
 				type: 'checkbox',
-				label: 'EXPERIMENTAL: Status polling - extra for edge (ask for status every second)',
+				label: 'EXPERIMENTAL: Status polling – extra for mini-edge (requests status every second)',
 				id: 'pollingEdge',
 				width: 12,
 				default: false,
@@ -179,6 +179,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		actions['switch_mode_and_source'] = {
 			name: 'Select source and target',
+			description: 'Combines Switch signal source and Switch mode (T-BAR/Auto). May behave differently than expected. 5th input is in BETA. Tested with: mini, mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -207,6 +208,7 @@ class MiniModuleInstance extends InstanceBase {
 		}
 		actions['build_pip_sources_and_target'] = {
 			name: 'Build PIP from selected sources',
+			description: 'Set PIP mode, select two sources and output (Live or Preview). Combines Select PIP mode, Select PIP layer (A or B), and Switch signal source. Tested with: mini.',
 			options: [
 				{
 					type: 'dropdown',
@@ -256,6 +258,7 @@ class MiniModuleInstance extends InstanceBase {
 		}
 		actions['switch_to_source'] = {
 			name: 'Switch signal source',
+			description: 'Similar to pressing the 1/2/3/4/5 source button on the device. 5th input is in BETA. Tested with: mini.',
 			options: [
 				{
 					type: 'dropdown',
@@ -273,6 +276,7 @@ class MiniModuleInstance extends InstanceBase {
 		}
 		actions['switch_mode'] = {
 			name: 'Switch mode (T-BAR/Auto)',
+			description: 'Choose between T-BAR or Auto mode for switching. Tested with: mini, mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -289,7 +293,8 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 		actions['pip_mode'] = {
-			name: 'Picture-In-Picture mode',
+			name: 'Select PIP mode',
+			description: 'Select picture-in-picture mode (off, center, top, bottom, left, right, etc.). Tested with: mini.',
 			options: [
 				{
 					type: 'dropdown',
@@ -307,7 +312,8 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		actions['switch_effect'] = {
-			name: 'Switch effect',
+			name: 'Set switch effect',
+			description: 'Set a transition effect, such as cut or fade. See hardware manual or presets for more. Tested with:mini.',
 			options: [
 				{
 					type: 'dropdown',
@@ -325,7 +331,8 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		actions['pip_layer'] = {
-			name: 'PIP layer (A or B)',
+			name: 'Select PIP layer (A or B)',
+			description: 'Select the PIP layer before setting the signal source. Tested with: mini.',
 			options: [
 				{
 					type: 'dropdown',
@@ -344,8 +351,8 @@ class MiniModuleInstance extends InstanceBase {
 
 		// HDMI or SDI
 		actions['switch_input_signal_channel'] = {
-			name: 'EXPERIMENTAL: Switch input signal channel (HDMI/SDI)',
-			description: 'Based on API v1.0.6 20250611, mini-iso, mini-edge SDI, mini-mx SDI',
+			name: 'BETA: Switch input signal channel (HDMI/SDI)',
+			description: 'Select the input channel (HDMI or SDI) for numbered inputs, if supported by hardware. Tested with: mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -372,8 +379,8 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		actions['switch_to_source_to_output'] = {
-			name: 'EXPERIMENTAL Switch signal source (PST or PGM)',
-			description: 'Based on API v1.0.6 20250611, is it possible on mini Series:mini-pro,mini-pro v3,mini-ISO',
+			name: 'BETA: Switch signal source (PST or PGM)',
+			description: 'Switch the selected signal to PST or PGM. Likely a better alternative to Select source and target, but untested on mini. Tested with: mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -413,8 +420,8 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		actions['switch_tbar_position'] = {
-			name: 'EXPERIMENTAL Set T-BAR position',
-			description: 'Based on API v1.0.6 20250611, is it possible on mini Series:mini-pro,mini-pro v3,mini-ISO',
+			name: 'EXPERIMENTAL: Set T-BAR position',
+			description: 'Set the T-BAR position to MIN or MAX. Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series:mini-pro,mini-pro v3,mini-ISO',
 			options: [
 				{
 					type: 'dropdown',
@@ -616,7 +623,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		feedbacks['set_switch_input_signal_channel'] = {
 			type: 'boolean',
-			name: 'EXPERIMENTAL Input channel (HDMI/SDI) linked to button',
+			name: 'BETA: Switch input signal channel (HDMI/SDI)',
 			description: 'Assigned channel (HDMI/SDI) for button',
 			defaultStyle: {
 				color: combineRgb(255, 255, 255),
@@ -649,7 +656,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		feedbacks['set_switch_to_source_to_output'] = {
 			type: 'boolean',
-			name: 'EXPERIMENTAL Source switched to output',
+			name: 'BETA: Switch signal source (PST or PGM)',
 			description: 'Source switched to output (PST or PGM)',
 			defaultStyle: {
 				color: combineRgb(255, 255, 255),
@@ -682,7 +689,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		feedbacks['set_switch_tbar_position'] = {
 			type: 'boolean',
-			name: 'EXPERIMENTAL T-BAR position',
+			name: 'EXPERIMENTAL: T-BAR position',
 			description: 'Is T-BAR on selected position',
 			defaultStyle: {
 				color: combineRgb(255, 255, 255),
@@ -1185,10 +1192,10 @@ class MiniModuleInstance extends InstanceBase {
 			for (const item2 of INPUT_CHANNEL_CHOICES_PART) {
 				presets.push({
 					type: 'button',
-					category: 'EXPERIMENTAL Select source channel (HDMI/SDI)',
-					name: 'EXPERIMENTAL Source ' + item.label + '\\n- ' + item2.label,
+					category: 'BETA: Switch input signal channel (HDMI/SDI)',
+					name: 'BETA: Source ' + item.label + '\\n- ' + item2.label,
 					style: {
-						text: 'EXPERIMENTAL Source ' + item.label + '\\n- ' + item2.label,
+						text: 'BETA: Source ' + item.label + '\\n- ' + item2.label,
 						size: 'auto',
 						color: this.TEXT_COLOR,
 						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -1228,10 +1235,10 @@ class MiniModuleInstance extends InstanceBase {
 			for (const item2 of SIGNAL_SWITCH_OUTPUT_CHOICES_PART) {
 				presets.push({
 					type: 'button',
-					category: 'EXPERIMENTAL Switch signal source to PST/PGM',
-					name: 'EXPERIMENTAL Source ' + item.label + '\\nto ' + item2.label,
+					category: 'BETA: Switch signal source (PST or PGM)',
+					name: 'BETA: Source ' + item.label + '\\nto ' + item2.label,
 					style: {
-						text: 'EXPERIMENTAL Source ' + item.label + '\\nto ' + item2.label,
+						text: 'BETA: Source ' + item.label + '\\nto ' + item2.label,
 						size: 'auto',
 						color: this.TEXT_COLOR,
 						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -1270,10 +1277,10 @@ class MiniModuleInstance extends InstanceBase {
 		for (const item of TBAR_POSITION_CHOICES) {
 			presets.push({
 				type: 'button',
-				category: 'EXPERIMENTAL T-BAR position',
-				name: 'EXPERIMENTAL T-BAR position ' + item.label,
+				category: 'EXPERIMENTAL: T-BAR position',
+				name: 'EXPERIMENTAL: T-BAR position ' + item.label,
 				style: {
-					text: 'EXPERIMENTAL T-BAR position ' + item.label,
+					text: 'EXPERIMENTAL: T-BAR position ' + item.label,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
