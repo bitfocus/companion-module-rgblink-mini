@@ -404,7 +404,8 @@ class MiniModuleInstance extends InstanceBase {
 			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSwitchToSourceToOutputMessage(action.options.sourceNumber, action.options.output)
 				if (action.options.output == OUTPUT_PGM_PROGRAM && action.options.movePgmToPst) {
-					if (this.apiConnector.deviceStatus.lastSourceOnOutput[OUTPUT_PGM_PROGRAM]) {
+					let prevPgm = this.apiConnector.deviceStatus.lastSourceOnOutput[OUTPUT_PGM_PROGRAM]
+					if (prevPgm && prevPgm != action.options.sourceNumber) {
 						this.apiConnector.sendSwitchToSourceToOutputMessage(this.apiConnector.deviceStatus.lastSourceOnOutput[OUTPUT_PGM_PROGRAM], OUTPUT_PST_PREVIEW)
 					}
 				}
