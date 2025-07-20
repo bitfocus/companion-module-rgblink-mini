@@ -438,6 +438,16 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+
+		/*
+		   actions to consider		
+		   0x08/0x09 AFV (Audio Follow Video) Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO (V1.0.6)
+		   0x0C/0x0D Mixing Audio Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO (V1.0.6)
+		   0x0E/0x0F HDMI and output audio volume setting Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO
+		   0x16/0x17 Extended audio volume setting Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO
+		   E0/E1 - a lot of streaming actions
+		 */
+
 		this.setActionDefinitions(actions)
 	}
 
