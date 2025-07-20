@@ -56,6 +56,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		pipLayer: undefined,
 		channelsForInput: [],
 		lastSourceOnOutput: [], // czy to duplikat dla prevSource i liveSource?
+		tBarPosition: undefined,
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -184,6 +185,13 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 	}
 
+	sendSetTBarPosition(value) {
+		value = value & 0xFFFF;
+		let lowHex = this.byteToTwoSignHex(value % 256)
+		let hiHex = this.byteToTwoSignHex(Math.floor(value / 256))
+		this.sendCommand('78', '08', lowHex, hiHex, '00') // set T-BAR position
+	}
+
 	consume22(message) {
 		let prev = message[0]
 		if (prev <= 3) {
@@ -216,10 +224,6 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 				// readed status, it's ok
 				this.emitConnectionStatusOK()
 				return this.logFeedback(redeableMsg, 'Status readed')
-			} else if (CMD == 'A2' && DAT1 == '18') {
-				// t-bar position update
-				this.emitConnectionStatusOK()
-				return this.logFeedback(redeableMsg, 'T-BAR position changed or readed')
 			}
 
 			if (CMD == '68') {
@@ -304,8 +308,23 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 						this.deviceStatus.switchEffect = effect
 						return this.logFeedback(redeableMsg, 'Switch effect: ' + SWITCH_EFFECT[effect])
 					}
+				} else if (DAT1 == '08' || DAT1 == '09') {
+					// Set T-BAR position
+					let position = parseInt(DAT2, this.PARSE_INT_HEX_MODE) + parseInt(DAT3, this.PARSE_INT_HEX_MODE) * 256
+					this.emitConnectionStatusOK()
+					this.deviceStatus.tBarPosition = position
+					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
+				}
+			} else if (CMD == 'A2') {
+				if (DAT1 == '18') {
+					// T-BAR position status changed
+					let position = parseInt(DAT2, this.PARSE_INT_HEX_MODE) + parseInt(DAT3, this.PARSE_INT_HEX_MODE) * 256
+					this.emitConnectionStatusOK()
+					this.deviceStatus.tBarPosition = position
+					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
 				}
 			}
+
 		} catch (ex) {
 			console.log(ex)
 		}

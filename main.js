@@ -59,6 +59,11 @@ const SIGNAL_SWITCH_OUTPUT_CHOICES_PART = [
 	{ id: OUTPUT_PGM_PROGRAM, label: 'PGM (Program)' },
 ]
 
+const TBAR_POSITION_CHOICES = [
+	{ id: 0, label: 'MIN' },
+	{ id: 0xFFFF, label: 'MAX' },
+]
+
 class MiniModuleInstance extends InstanceBase {
 	BACKGROUND_COLOR_PREVIEW
 	BACKGROUND_COLOR_ON_AIR
@@ -394,6 +399,25 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		actions['switch_tbar_position'] = {
+			name: 'EXPERIMENTAL Set T-BAR position',
+			description: 'Based on API v1.0.6 20250611, is it possible on mini Series:mini-pro,mini-pro v3,mini-ISO',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Position',
+					id: 'position',
+					default: 0,
+					tooltip: 'Choose position',
+					choices: TBAR_POSITION_CHOICES,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSetTBarPosition(action.options.position)
+			},
+		}
+
 		this.setActionDefinitions(actions)
 	}
 
@@ -406,6 +430,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_switch_effect')
 		this.checkFeedbacks('set_switch_input_signal_channel')
 		this.checkFeedbacks('set_switch_to_source_to_output')
+		this.checkFeedbacks('set_switch_tbar_position')
 	}
 
 	async configUpdated(config) {
@@ -638,13 +663,33 @@ class MiniModuleInstance extends InstanceBase {
 				},
 			],
 			callback: (feedback) => {
-				this.log(feedback.options.sourceNumber)
-				this.log(feedback.options.output)
-				this.log(this.apiConnector.deviceStatus.lastSourceOnOutput)
 				return (feedback.options.sourceNumber == this.apiConnector.deviceStatus.lastSourceOnOutput[feedback.options.output])
 			},
 		}
 
+		feedbacks['set_switch_tbar_position'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL T-BAR position',
+			description: 'Is T-BAR on selected position',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Position',
+					id: 'position',
+					default: 0,
+					tooltip: 'Choose position',
+					choices: TBAR_POSITION_CHOICES,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.position == this.apiConnector.deviceStatus.tBarPosition)
+			},
+		}
 
 
 		this.setFeedbackDefinitions(feedbacks)
@@ -1207,6 +1252,45 @@ class MiniModuleInstance extends InstanceBase {
 					],
 				})
 			}
+		}
+
+		for (const item of TBAR_POSITION_CHOICES) {
+			presets.push({
+				type: 'button',
+				category: 'EXPERIMENTAL T-BAR position',
+				name: 'EXPERIMENTAL T-BAR position ' + item.label,
+				style: {
+					text: 'EXPERIMENTAL T-BAR position ' + item.label,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'switch_tbar_position',
+								options: {
+									position: item.id,
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'set_switch_tbar_position',
+						options: {
+							position: item.id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
 		}
 
 		presets.push(showEffectPreset)
