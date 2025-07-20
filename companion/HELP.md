@@ -1,45 +1,46 @@
 # RGBlink mini
 
-This module was initially created only for the _mini_. However, some actions was tested with _mini_, other with _mini-edge SDI_. Some actions should also works on _mini+_, _mini-pro_ and other. See details in table below.
+This module was initially created for the _mini_ device. However, some actions have been tested with the _mini_, others with the _mini-edge SDI_. Some actions are also expected to work on the _mini+_, _mini-pro_, and other models. See the table below for specific details.
 
-Devices must be controlled over a network, USB control is NOT supported.
+Devices must be controlled over a network — USB control is NOT supported.
 
-## **Available actions**
+## **Available Actions**
 
-| Action    | Description     | Tested with [(* devices list)](#tested-with)  | Declarative API compatibility [(** api specifications)](#api-list) |
-|---------------------------------|-----------------------------------------------------|-------------|--|
-| Switch signal source | Similiar to pressing the 1/2/3/4/5 source button on the device. 5th input as BETA. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series:mini-pro,mini-pro v3,mini-ISO [(3)](#api-v106)|
-| Switch mode (T-BAR/Auto) | Choose T-BAR or Auto mode for switching. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series:mini-pro,mini-pro v3,mini-ISO [(3)](#api-v106) |
-| Select source and target | This is combination of _Switch signal source_ and _Switch mode (T-BAR/Auto)_ actions. It may work a little differently than you expect. 5th input as BETA. | mini [(1)](#device-1);<br> mini-edge SDI [(2)](#device-2) | _see details above_ |
-| BETA: Switch signal source (PST or PGM) |  Switch selected signal to PST or PGM. This is probably better action than _Select source and target_. However, it's not tested with _mini_. | mini-edge SDI [(2)](#device-2) | mini Series:mini-pro,mini-pro v3,mini-ISO [(3)](#api-v106) (however PST command is same as _Switch signal source_, which is compabile with mini/mini-pro) |
-| Switch effect | Transition effect, like cut, fade. See details in hardware manual or presets. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series:mini-pro,mini-pro v3,mini-ISO [(3)](#api-v106) |
-| Select PIP mode | Select picture-in-picture mode (off, center, top, bottom, left, right and others) |  mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series:mini-pro,mini-pro v3,mini-ISO [(3)](#api-v106) |
-| Select PIP layer (A or B) | Select PIP layer before set signal source | mini [(1)](#device-1) | _undocummented_ |
-| Build PIP from selected sources | Select PIP mode, two sources, and output (Live or Preview). This is combination of _Select PIP mode_, _Select PIP layer (A or B)_ and _Switch signal source_.  |  mini [(1)](#device-1) |  _see details above_ |
-| BETA: Switch input signal channel (HDMI/SDI) | Select channel for numbered input, if hardware contains HDMI and SDI inputs | mini-edge SDI [(2)](#device-2) | MINI Series:mini-iso、mini-edge SDI、mini-mx SDI [(3)](#api-v106) |
-| EXPERIMENTAL: Set T-BAR position | Set T-BAR position as a MIN or MAX | not tested yet | mini Series:mini-pro,mini-pro v3,mini-ISO [(3)](#api-v106)
+| Action | Description | Tested with [(* devices list)](#tested-with) | Declarative API Compatibility [(** API Specifications)](#api-list) |
+|--------|-------------|--------------------------|----------------------------------|
+| Switch signal source | Similar to pressing the 1/2/3/4/5 source button on the device. 5th input is in BETA. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| Switch mode (T-BAR/Auto) | Choose between T-BAR or Auto mode for switching. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| Select source and target | Combines _Switch signal source_ and _Switch mode (T-BAR/Auto)_. May behave differently than expected. 5th input is in BETA. | mini [(1)](#device-1);<br/>mini-edge SDI [(2)](#device-2) | _See details above_ |
+| BETA: Switch signal source (PST or PGM) | Switch the selected signal to PST or PGM. Likely a better alternative to _Select source and target_, but untested on _mini_. | mini-edge SDI [(2)](#device-2) | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) (Note: PST command is the same as _Switch signal source_, which is compatible with mini/mini-pro) |
+| Switch effect | Set a transition effect, such as cut or fade. See hardware manual or presets for more. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| Select PIP mode | Select picture-in-picture mode (off, center, top, bottom, left, right, etc.). | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| Select PIP layer (A or B) | Select the PIP layer before setting the signal source. | mini [(1)](#device-1) | _Undocumented_ |
+| Build PIP from selected sources | Set PIP mode, select two sources and output (Live or Preview). Combines _Select PIP mode_, _Select PIP layer (A or B)_, and _Switch signal source_. | mini [(1)](#device-1) | _See details above_ |
+| BETA: Switch input signal channel (HDMI/SDI) | Select the input channel (HDMI or SDI) for numbered inputs, if supported by hardware. | mini-edge SDI [(2)](#device-2) | mini Series: mini-ISO, mini-edge SDI, mini-mx SDI [(3)](#api-v106) |
+| EXPERIMENTAL: Set T-BAR position | Set the T-BAR position to MIN or MAX. | Not tested yet | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 
 ### <a name="tested-with"></a>(*) Tested with devices
 
-1. <a name="device-1"></a> mini, with firmware MCU VER 1.14, VIDEO VER 1.57
-2. <a name="device-2"></a> mini-edge SDI, with firmware TODO VERESION
+1. <a name="device-1"></a> mini, with firmware MCU VER 1.14, VIDEO VER 1.57  
+2. <a name="device-2"></a> mini-edge SDI, with firmware TODO VERSION
 
-### <a name="api-list"></a>(**) API specifications
-1. <a name="api-mini"></a> mini  API(EN)-20210225.pdf
-2. <a name="api-mini-pro"></a> RGBlink mini-pro OpenAPI_V1.2_20220208.pdf
+### <a name="api-list"></a>(**) API Specifications
+
+1. <a name="api-mini"></a> mini API(EN)-20210225.pdf  
+2. <a name="api-mini-pro"></a> RGBlink mini-pro OpenAPI_V1.2_20220208.pdf  
 3. <a name="api-v106"></a> RGBlink API_V1.0.6_20250611.pdf
 
-## **Available feedbacks (current state)**
+## **Available Feedbacks (Current State)**
 
-There is few feedbacks, similiar to actions. See presets to view examples.
+There are a few feedbacks available, similar to actions. See presets for usage examples.
 
-## **Release notes**
+## **Release Notes**
 
 ### Changes in 2.1.0
 
-- Added action and changes, based on API v1.0.6 20250611, tested mini-edge SDI (TODO firmware version)
-- Added extra polling commands for mini-edge SDI (as a default they are disabled in connection settings)
-- Added 5th input number (BETA, not all hardware contains this button)
-- Added BETA action _Switch signal source (PST or PGM)_ which should be better than _Select source and target_ but it's not tested on _mini_
-- Added BETA action _Switch input signal channel (HDMI/SDI)_ for hardware with 4 HDMI and 4 SDI inputs.
-- Added EXPERIMENTAL action _Set T-BAR position_ (not tested yet)
+- Added actions and changes based on _RGBlink API_V1.0.6_20250611.pdf_, tested with mini-edge SDI (TODO firmware version)
+- Added extra polling commands for mini-edge SDI (disabled by default in connection settings)
+- Added 5th input number (BETA — not all hardware includes this button)
+- Added BETA action _Switch signal source (PST or PGM)_, intended as a better alternative to _Select source and target_ (not tested on _mini_)
+- Added BETA action _Switch input signal channel (HDMI/SDI)_ for devices with 4 HDMI and 4 SDI inputs
+- Added EXPERIMENTAL action _Set T-BAR position_ (not yet tested)
