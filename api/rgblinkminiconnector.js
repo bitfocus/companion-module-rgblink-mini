@@ -57,6 +57,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		channelsForInput: [],
 		lastSourceOnOutput: [], // czy to duplikat dla prevSource i liveSource?
 		tBarPosition: undefined,
+		audioFollowVideo: [],
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -100,6 +101,15 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			commands.push(new PollingCommand('73', '19', '02', '00', '00')) // channel type for input 3 (HDMI/SDI)
 			commands.push(new PollingCommand('73', '19', '03', '00', '00')) // channel type for input 4 (HDMI/SDI)
 			commands.push(new PollingCommand('A2', '18', '00', '00', '00')) // channel type for input(HDMI/SDI)
+
+			commands.push(new PollingCommand('75', '03', '00', '00', '00')) // POC read Signal source switch set
+			commands.push(new PollingCommand('75', '03', '00', '00', '01')) // POC read Signal source switch set
+
+			commands.push(new PollingCommand('81', '09', '00', '00', '00')) // Read Audio Follow Video - HDMI 1
+			commands.push(new PollingCommand('81', '09', '01', '00', '00')) // Read Audio Follow Video - HDMI 2
+			commands.push(new PollingCommand('81', '09', '02', '00', '00')) // Read Audio Follow Video - HDMI 3
+			commands.push(new PollingCommand('81', '09', '03', '00', '00')) // Read Audio Follow Video - HDMI 4
+			commands.push(new PollingCommand('81', '09', '04', '00', '00')) // Read Audio Follow Video - is it works?
 		}
 
 		return commands
@@ -192,6 +202,20 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		this.sendCommand('78', '08', lowHex, hiHex, '00') // set T-BAR position
 	}
 
+	sendSetAudioFollowVideo(source, onOff) {
+		if (this.isSourceNumberValid(source)) {
+			let sourceHex = this.byteToTwoSignHex(source - 1)
+			if (this.isAFVonOffValid(onOff)) {
+				let onOffHex = this.byteToTwoSignHex(onOff)
+				this.sendCommand('81', '08', sourceHex, onOffHex, '00')
+			} else {
+				this.myWarn('Bad onOff:' + onOff)
+			}
+		} else {
+			this.myWarn('Bad source:' + source)
+		}
+	}
+
 	consume22(message) {
 		let prev = message[0]
 		if (prev <= 3) {
@@ -214,6 +238,10 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 
 	isOutputValid(output) {
 		return (output == OUTPUT_PST_PREVIEW || output == OUTPUT_PGM_PROGRAM)
+	}
+
+	isAFVonOffValid(onOff) {
+		return (onOff == 0 || onOff == 1)
 	}
 
 	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
@@ -322,6 +350,17 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 					this.emitConnectionStatusOK()
 					this.deviceStatus.tBarPosition = position
 					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
+				}
+			} else if (CMD == '81') {
+				if (DAT1 == '08' || DAT1 == '09') {
+					// 0x08/0x09 AFV (Audio Follow Video)
+					let src = parseInt(DAT2) + 1
+					let onOff = parseInt(DAT3)
+					if (this.isSourceNumberValid(src) && this.isAFVonOffValid(onOff)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.audioFollowVideo[src] = onOff
+						return this.logFeedback(redeableMsg, 'AFV status for input:' + src + ' is:' + onOff)
+					}
 				}
 			}
 

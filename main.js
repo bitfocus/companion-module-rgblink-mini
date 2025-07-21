@@ -64,6 +64,11 @@ const TBAR_POSITION_CHOICES = [
 	{ id: 0xFFFF, label: 'MAX' },
 ]
 
+const AFV_ON_OFF_CHOICES = [
+	{ id: 0, label: 'OFF' },
+	{ id: 1, label: 'ON' },
+]
+
 class MiniModuleInstance extends InstanceBase {
 	BACKGROUND_COLOR_PREVIEW
 	BACKGROUND_COLOR_ON_AIR
@@ -438,6 +443,33 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		actions['audio_follow_video'] = {
+			name: 'EXPERIMENTAL: Set AFV (Audio Follow Video)',
+			description: 'Enable or disable AFV for selected input (HDMI only?). Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series:mini-pro,mini-pro v3,mini-ISO',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source number',
+					id: 'sourceNumber',
+					default: '1',
+					tooltip: 'Choose source number',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'AFV status',
+					id: 'onOff',
+					default: 0,
+					tooltip: 'Choose source number',
+					choices: AFV_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSetAudioFollowVideo(action.options.sourceNumber, action.options.onOff)
+			},
+		}
 
 		/*
 		   actions to consider		
@@ -461,6 +493,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_switch_input_signal_channel')
 		this.checkFeedbacks('set_switch_to_source_to_output')
 		this.checkFeedbacks('set_switch_tbar_position')
+		this.checkFeedbacks('set_audio_follow_video')
 	}
 
 	async configUpdated(config) {
@@ -721,6 +754,38 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		feedbacks['set_audio_follow_video'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL: AFV (Audio Follow Video) status',
+			description: 'Is AFV on/off for selected input',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Source number',
+					id: 'sourceNumber',
+					default: '1',
+					tooltip: 'Choose source number',
+					choices: SOURCE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'AFV status',
+					id: 'onOff',
+					default: 0,
+					tooltip: 'Choose source number',
+					choices: AFV_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.onOff == this.apiConnector.deviceStatus.audioFollowVideo[feedback.options.sourceNumber])
+			},
+		}
 
 		this.setFeedbackDefinitions(feedbacks)
 	}
@@ -1321,6 +1386,49 @@ class MiniModuleInstance extends InstanceBase {
 					},
 				],
 			})
+		}
+
+		for (const item of SOURCE_CHOICES_PART) {
+			for (const item2 of AFV_ON_OFF_CHOICES) {
+				presets.push({
+					type: 'button',
+					category: 'EXPERIMENTAL: AFV status',
+					name: 'EXPERIMENTAL: Source ' + item.label + '\\n AFV ' + item2.label,
+					style: {
+						text: 'EXPERIMENTAL: Source ' + item.label + '\\n AFV ' + item2.label,
+						size: 'auto',
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+					},
+					steps: [
+						{
+							down: [
+								{
+									actionId: 'audio_follow_video',
+									options: {
+										sourceNumber: item.id,
+										onOff: item2.id,
+									},
+								},
+							],
+							up: [],
+						},
+					],
+					feedbacks: [
+						{
+							feedbackId: 'set_audio_follow_video',
+							options: {
+								sourceNumber: item.id,
+								onOff: item2.id,
+							},
+							style: {
+								color: this.TEXT_COLOR,
+								bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+							},
+						},
+					],
+				})
+			}
 		}
 
 		presets.push(showEffectPreset)

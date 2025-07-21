@@ -18,6 +18,7 @@ Devices must be controlled over a network — USB control is NOT supported.
 | Build PIP from selected sources | Set PIP mode, select two sources and output (Live or Preview). Combines _Select PIP mode_, _Select PIP layer (A or B)_, and _Switch signal source_. | mini [(1)](#device-1) | _See details above_ |
 | BETA: Switch input signal channel (HDMI/SDI) | Select the input channel (HDMI or SDI) for numbered inputs, if supported by hardware. | mini-edge SDI [(2)](#device-2) | mini Series: mini-ISO, mini-edge SDI, mini-mx SDI [(3)](#api-v106) |
 | EXPERIMENTAL: Set T-BAR position | Set the T-BAR position to MIN or MAX. | Not tested yet | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| EXPERIMENTAL: Set AFV (Audio Follow Video) | Enable or disable AFV for selected input (HDMI only?) | Not tested yet | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 
 ### <a name="tested-with"></a>(*) Tested with devices
 
@@ -44,3 +45,4 @@ There are a few feedbacks available, similar to actions. See presets for usage e
 - Added BETA action _Switch signal source (PST or PGM)_, intended as a better alternative to _Select source and target_ (not tested on _mini_)
 - Added BETA action _Switch input signal channel (HDMI/SDI)_ for devices with 4 HDMI and 4 SDI inputs
 - Added EXPERIMENTAL action _Set T-BAR position_ (not yet tested)
+- Added EXPERIMENTAL action _Set AFV (Audio Follow Video)_ (not yet tested)
