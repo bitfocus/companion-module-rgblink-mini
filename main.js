@@ -64,7 +64,7 @@ const TBAR_POSITION_CHOICES = [
 	{ id: 0xFFFF, label: 'MAX' },
 ]
 
-const AFV_ON_OFF_CHOICES = [
+const AUDIO_ON_OFF_CHOICES = [
 	{ id: 0, label: 'OFF' },
 	{ id: 1, label: 'ON' },
 ]
@@ -318,7 +318,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		actions['switch_effect'] = {
 			name: 'Set switch effect',
-			description: 'Set a transition effect, such as cut or fade. See hardware manual or presets for more. Tested with:mini.',
+			description: 'Set a transition effect, such as cut or fade. See hardware manual or presets for more. Tested with: mini.',
 			options: [
 				{
 					type: 'dropdown',
@@ -426,7 +426,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		actions['switch_tbar_position'] = {
 			name: 'EXPERIMENTAL: Set T-BAR position',
-			description: 'Set the T-BAR position to MIN or MAX. Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series:mini-pro,mini-pro v3,mini-ISO',
+			description: 'Set the T-BAR position to MIN or MAX. Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO',
 			options: [
 				{
 					type: 'dropdown',
@@ -443,9 +443,28 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		actions['line_in_status'] = {
+			name: 'EXPERIMENTAL: Set LINE IN on/off',
+			description: 'Turn on/off LINE IN. Not yet tested. Based on API v1.0.6 20250611, is it possible on MSP Series: MSP 405',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'LINE IN status',
+					id: 'onOff',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSetLineInStatus(action.options.onOff)
+			},
+		}
+
 		actions['audio_follow_video'] = {
 			name: 'EXPERIMENTAL: Set AFV (Audio Follow Video)',
-			description: 'Enable or disable AFV for selected input (HDMI only?). Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series:mini-pro,mini-pro v3,mini-ISO',
+			description: 'Enable or disable AFV for selected input (HDMI only?). Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO',
 			options: [
 				{
 					type: 'dropdown',
@@ -461,8 +480,8 @@ class MiniModuleInstance extends InstanceBase {
 					label: 'AFV status',
 					id: 'onOff',
 					default: 0,
-					tooltip: 'Choose source number',
-					choices: AFV_ON_OFF_CHOICES,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -473,7 +492,6 @@ class MiniModuleInstance extends InstanceBase {
 
 		/*
 		   actions to consider		
-		   0x08/0x09 AFV (Audio Follow Video) Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO (V1.0.6)
 		   0x0C/0x0D Mixing Audio Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO (V1.0.6)
 		   0x0E/0x0F HDMI and output audio volume setting Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO
 		   0x16/0x17 Extended audio volume setting Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO
@@ -494,6 +512,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_switch_to_source_to_output')
 		this.checkFeedbacks('set_switch_tbar_position')
 		this.checkFeedbacks('set_audio_follow_video')
+		this.checkFeedbacks('set_line_in_status')
 	}
 
 	async configUpdated(config) {
@@ -754,6 +773,30 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		feedbacks['set_line_in_status'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL: LINE IN on/off',
+			description: 'Is LINE IN on/off',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'LINE IN status',
+					id: 'onOff',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.onOff == this.apiConnector.deviceStatus.lineInStatus)
+			},
+		}
+
 		feedbacks['set_audio_follow_video'] = {
 			type: 'boolean',
 			name: 'EXPERIMENTAL: AFV (Audio Follow Video) status',
@@ -777,8 +820,8 @@ class MiniModuleInstance extends InstanceBase {
 					label: 'AFV status',
 					id: 'onOff',
 					default: 0,
-					tooltip: 'Choose source number',
-					choices: AFV_ON_OFF_CHOICES,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
 					minChoicesForSearch: 0,
 				},
 			],
@@ -1389,7 +1432,7 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		for (const item of SOURCE_CHOICES_PART) {
-			for (const item2 of AFV_ON_OFF_CHOICES) {
+			for (const item2 of AUDIO_ON_OFF_CHOICES) {
 				presets.push({
 					type: 'button',
 					category: 'EXPERIMENTAL: AFV status',
@@ -1429,6 +1472,46 @@ class MiniModuleInstance extends InstanceBase {
 					],
 				})
 			}
+		}
+
+
+		for (const item of AUDIO_ON_OFF_CHOICES) {
+			presets.push({
+				type: 'button',
+				category: 'EXPERIMENTAL: LINE IN status',
+				name: 'EXPERIMENTAL: LINE IN is ' + item.label,
+				style: {
+					text: 'EXPERIMENTAL: LINE IN is ' + item.label,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'line_in_status',
+								options: {
+									onOff: item.id,
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'set_line_in_status',
+						options: {
+							onOff: item.id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
 		}
 
 		presets.push(showEffectPreset)

@@ -58,6 +58,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		lastSourceOnOutput: [], // czy to duplikat dla prevSource i liveSource?
 		tBarPosition: undefined,
 		audioFollowVideo: [],
+		lineInStatus: undefined,
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -105,11 +106,14 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			commands.push(new PollingCommand('75', '03', '00', '00', '00')) // POC read Signal source switch set
 			commands.push(new PollingCommand('75', '03', '00', '00', '01')) // POC read Signal source switch set
 
+			// commands.push(new PollingCommand('81', '01', '00', '00', '00')) // LINE IN STATUS, but for MSP series 405
 			commands.push(new PollingCommand('81', '09', '00', '00', '00')) // Read Audio Follow Video - HDMI 1
 			commands.push(new PollingCommand('81', '09', '01', '00', '00')) // Read Audio Follow Video - HDMI 2
 			commands.push(new PollingCommand('81', '09', '02', '00', '00')) // Read Audio Follow Video - HDMI 3
 			commands.push(new PollingCommand('81', '09', '03', '00', '00')) // Read Audio Follow Video - HDMI 4
 			commands.push(new PollingCommand('81', '09', '04', '00', '00')) // Read Audio Follow Video - is it works?
+			// commands.push(new PollingCommand('81', '0D', '00', '00', '00')) // Read Mixing Audio for PST
+			// commands.push(new PollingCommand('81', '0D', '01', '00', '00')) // Read Mixing Audio for PGM
 		}
 
 		return commands
@@ -205,7 +209,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 	sendSetAudioFollowVideo(source, onOff) {
 		if (this.isSourceNumberValid(source)) {
 			let sourceHex = this.byteToTwoSignHex(source - 1)
-			if (this.isAFVonOffValid(onOff)) {
+			if (this.isOnOffValid(onOff)) {
 				let onOffHex = this.byteToTwoSignHex(onOff)
 				this.sendCommand('81', '08', sourceHex, onOffHex, '00')
 			} else {
@@ -213,6 +217,15 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			}
 		} else {
 			this.myWarn('Bad source:' + source)
+		}
+	}
+
+	sendSetLineInStatus(onOff) {
+		if (this.isOnOffValid(onOff)) {
+			let onOffHex = this.byteToTwoSignHex(onOff)
+			this.sendCommand('81', '00', '00', onOffHex, '00')
+		} else {
+			this.myWarn('Bad onOff:' + onOff)
 		}
 	}
 
@@ -240,7 +253,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		return (output == OUTPUT_PST_PREVIEW || output == OUTPUT_PGM_PROGRAM)
 	}
 
-	isAFVonOffValid(onOff) {
+	isOnOffValid(onOff) {
 		return (onOff == 0 || onOff == 1)
 	}
 
@@ -352,11 +365,20 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
 				}
 			} else if (CMD == '81') {
-				if (DAT1 == '08' || DAT1 == '09') {
+				if (DAT1 == '00' || DAT1 == '01') {
+					// 0x00 Set LINE IN status
+					// 0x01 Read LINE IN status
+					let onOff = parseInt(DAT3)
+					if (this.isOnOffValid(onOff)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.lineInStatus = onOff
+						return this.logFeedback(redeableMsg, 'LINE IN status:' + onOff)
+					}
+				} else if (DAT1 == '08' || DAT1 == '09') {
 					// 0x08/0x09 AFV (Audio Follow Video)
 					let src = parseInt(DAT2) + 1
 					let onOff = parseInt(DAT3)
-					if (this.isSourceNumberValid(src) && this.isAFVonOffValid(onOff)) {
+					if (this.isSourceNumberValid(src) && this.isOnOffValid(onOff)) {
 						this.emitConnectionStatusOK()
 						this.deviceStatus.audioFollowVideo[src] = onOff
 						return this.logFeedback(redeableMsg, 'AFV status for input:' + src + ' is:' + onOff)
