@@ -1435,7 +1435,7 @@ class MiniModuleInstance extends InstanceBase {
 			for (const item2 of AUDIO_ON_OFF_CHOICES) {
 				presets.push({
 					type: 'button',
-					category: 'EXPERIMENTAL: AFV status',
+					category: 'EXPERIMENTAL: Set AFV status',
 					name: 'EXPERIMENTAL: Source ' + item.label + '\\n AFV ' + item2.label,
 					style: {
 						text: 'EXPERIMENTAL: Source ' + item.label + '\\n AFV ' + item2.label,
@@ -1478,7 +1478,7 @@ class MiniModuleInstance extends InstanceBase {
 		for (const item of AUDIO_ON_OFF_CHOICES) {
 			presets.push({
 				type: 'button',
-				category: 'EXPERIMENTAL: LINE IN status',
+				category: 'EXPERIMENTAL: Set LINE IN status',
 				name: 'EXPERIMENTAL: LINE IN is ' + item.label,
 				style: {
 					text: 'EXPERIMENTAL: LINE IN is ' + item.label,
