@@ -59,6 +59,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		tBarPosition: undefined,
 		audioFollowVideo: [],
 		lineInStatus: undefined,
+		mixingAudio:[],
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -112,8 +113,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			commands.push(new PollingCommand('81', '09', '02', '00', '00')) // Read Audio Follow Video - HDMI 3
 			commands.push(new PollingCommand('81', '09', '03', '00', '00')) // Read Audio Follow Video - HDMI 4
 			commands.push(new PollingCommand('81', '09', '04', '00', '00')) // Read Audio Follow Video - is it works?
-			// commands.push(new PollingCommand('81', '0D', '00', '00', '00')) // Read Mixing Audio for PST
-			// commands.push(new PollingCommand('81', '0D', '01', '00', '00')) // Read Mixing Audio for PGM
+			commands.push(new PollingCommand('81', '0D', '00', '00', '00')) // Read Mixing Audio for PST
+			commands.push(new PollingCommand('81', '0D', '01', '00', '00')) // Read Mixing Audio for PGM
 		}
 
 		return commands
@@ -226,6 +227,21 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			this.sendCommand('81', '00', '00', onOffHex, '00')
 		} else {
 			this.myWarn('Bad onOff:' + onOff)
+		}
+	}
+
+	sendSetAudioMixing(outputPstOrPgm, bit0, bit1, bit2, bit3, bit4) {
+		if (this.isOutputValid(outputPstOrPgm) && this.isOnOffValid(bit0) && this.isOnOffValid(bit1) && this.isOnOffValid(bit2) && this.isOnOffValid(bit3) && this.isOnOffValid(bit4)) {
+			let value =
+				(bit4 << 4) |
+				(bit3 << 3) |
+				(bit2 << 2) |
+				(bit1 << 1) |
+				(bit0 << 0)
+			let dat3 = this.byteToTwoSignHex(value)
+			this.sendCommand('81', '0C', this.byteToTwoSignHex(outputPstOrPgm), dat3, '00')
+		} else {
+			this.myWarn(`Bad param(s) output;${outputPstOrPgm} bits: ${bit0},${bit1},${bit2},${bit3},${bit4}`)
 		}
 	}
 
@@ -382,6 +398,15 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 						this.emitConnectionStatusOK()
 						this.deviceStatus.audioFollowVideo[src] = onOff
 						return this.logFeedback(redeableMsg, 'AFV status for input:' + src + ' is:' + onOff)
+					}
+				} else if (DAT1 == '0C' || DAT1 == '0D') {
+					// 0x0C/0x0D Mixing Audio
+					let outputPstOrPgm = parseInt(DAT2)
+					let onOffValue = parseInt(DAT3, this.PARSE_INT_HEX_MODE)
+					if (this.isOutputValid(outputPstOrPgm)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.mixingAudio[outputPstOrPgm] = onOffValue
+						return this.logFeedback(redeableMsg, `Mixing audio value for ${outputPstOrPgm} is ${onOffValue}`)
 					}
 				}
 			}

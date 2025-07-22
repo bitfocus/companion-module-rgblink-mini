@@ -463,8 +463,8 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		actions['audio_follow_video'] = {
-			name: 'EXPERIMENTAL: Set AFV (Audio Follow Video)',
-			description: 'Enable or disable AFV for selected input (HDMI only?). Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO',
+			name: 'BETA: Set AFV (Audio Follow Video)',
+			description: 'Enable or disable AFV for selected input (HDMI only?). Tested with: mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -487,6 +487,77 @@ class MiniModuleInstance extends InstanceBase {
 			],
 			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSetAudioFollowVideo(action.options.sourceNumber, action.options.onOff)
+			},
+		}
+
+		actions['mixing_audio'] = {
+			name: 'EXPERIMENTAL: Set mixing audio',
+			description: 'Turn on/off audio from sources. Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Choose output (PST or PGM)',
+					id: 'output',
+					default: OUTPUT_PST_PREVIEW,
+					tooltip: 'Choose output (preview or program)',
+					choices: SIGNAL_SWITCH_OUTPUT_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source 1',
+					id: 'onOff1',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source 2',
+					id: 'onOff2',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source 3',
+					id: 'onOff3',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source 4',
+					id: 'onOff4',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'External',
+					id: 'onOff5',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSetAudioMixing(
+					action.options.output,
+					action.options.onOff1,
+					action.options.onOff2,
+					action.options.onOff3,
+					action.options.onOff4,
+					action.options.onOff5
+				)
 			},
 		}
 
@@ -513,6 +584,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_switch_tbar_position')
 		this.checkFeedbacks('set_audio_follow_video')
 		this.checkFeedbacks('set_line_in_status')
+		this.checkFeedbacks('set_mixing_audio')
 	}
 
 	async configUpdated(config) {
@@ -799,7 +871,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		feedbacks['set_audio_follow_video'] = {
 			type: 'boolean',
-			name: 'EXPERIMENTAL: AFV (Audio Follow Video) status',
+			name: 'BETA: AFV (Audio Follow Video) status',
 			description: 'Is AFV on/off for selected input',
 			defaultStyle: {
 				color: combineRgb(255, 255, 255),
@@ -827,6 +899,81 @@ class MiniModuleInstance extends InstanceBase {
 			],
 			callback: (feedback) => {
 				return (feedback.options.onOff == this.apiConnector.deviceStatus.audioFollowVideo[feedback.options.sourceNumber])
+			},
+		}
+
+		feedbacks['set_mixing_audio'] = {
+			type: 'boolean',
+			name: 'EXPERIMENAL: Mixing audio status',
+			description: 'Mixing audio statuses for inputs',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Choose output (PST or PGM)',
+					id: 'output',
+					default: OUTPUT_PST_PREVIEW,
+					tooltip: 'Choose output (preview or program)',
+					choices: SIGNAL_SWITCH_OUTPUT_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source 1',
+					id: 'onOff1',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source 2',
+					id: 'onOff2',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source 3',
+					id: 'onOff3',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'Source 4',
+					id: 'onOff4',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'dropdown',
+					label: 'External',
+					id: 'onOff5',
+					default: 0,
+					tooltip: 'Choose status',
+					choices: AUDIO_ON_OFF_CHOICES,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				let value =
+					(feedback.options.onOff5 << 4) |
+					(feedback.options.onOff4 << 3) |
+					(feedback.options.onOff3 << 2) |
+					(feedback.options.onOff2 << 1) |
+					(feedback.options.onOff1 << 0)
+				return (value == this.apiConnector.deviceStatus.mixingAudio[feedback.options.output])
 			},
 		}
 
@@ -1305,6 +1452,7 @@ class MiniModuleInstance extends InstanceBase {
 				},
 			})
 		}
+		presets.push(showEffectPreset)
 
 		for (const item of SOURCE_CHOICES_PART_ONLY_FOUR) {
 			for (const item2 of INPUT_CHANNEL_CHOICES_PART) {
@@ -1435,10 +1583,10 @@ class MiniModuleInstance extends InstanceBase {
 			for (const item2 of AUDIO_ON_OFF_CHOICES) {
 				presets.push({
 					type: 'button',
-					category: 'EXPERIMENTAL: Set AFV status',
-					name: 'EXPERIMENTAL: Source ' + item.label + '\\n AFV ' + item2.label,
+					category: 'BETA: Set AFV status',
+					name: 'BETA: Source ' + item.label + '\\n AFV ' + item2.label,
 					style: {
-						text: 'EXPERIMENTAL: Source ' + item.label + '\\n AFV ' + item2.label,
+						text: 'BETA: Source ' + item.label + '\\n AFV ' + item2.label,
 						size: 'auto',
 						color: this.TEXT_COLOR,
 						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -1514,7 +1662,101 @@ class MiniModuleInstance extends InstanceBase {
 			})
 		}
 
-		presets.push(showEffectPreset)
+		for (const item of SIGNAL_SWITCH_OUTPUT_CHOICES_PART) {
+			presets.push({
+				type: 'button',
+				category: 'EXPERIMENTAL: Mixing audio',
+				name: 'EXPERIMENTAL: All audio ON for ' + item.label,
+				style: {
+					text: 'EXPERIMENTAL: All audio ON for ' + item.label,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'mixing_audio',
+								options: {
+									output: item.id,
+									onOff1: 1,
+									onOff2: 1,
+									onOff3: 1,
+									onOff4: 1,
+									onOff5: 1,
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'set_mixing_audio',
+						options: {
+							output: item.id,
+							onOff1: 1,
+							onOff2: 1,
+							onOff3: 1,
+							onOff4: 1,
+							onOff5: 1,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+
+			presets.push({
+				type: 'button',
+				category: 'EXPERIMENTAL: Mixing audio',
+				name: 'EXPERIMENTAL: All audio OFF for ' + item.label,
+				style: {
+					text: 'EXPERIMENTAL: All audio OFF for ' + item.label,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'mixing_audio',
+								options: {
+									output: item.id,
+									onOff1: 0,
+									onOff2: 0,
+									onOff3: 0,
+									onOff4: 0,
+									onOff5: 0,
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'set_mixing_audio',
+						options: {
+							output: item.id,
+							onOff1: 0,
+							onOff2: 0,
+							onOff3: 0,
+							onOff4: 0,
+							onOff5: 0,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
 
 		this.setPresetDefinitions(presets)
 	}
