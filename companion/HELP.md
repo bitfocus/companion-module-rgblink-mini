@@ -18,7 +18,7 @@ Devices must be controlled over a network — USB control is NOT supported.
 | Build PIP from selected sources | Set PIP mode, select two sources and output (Live or Preview). Combines _Select PIP mode_, _Select PIP layer (A or B)_, and _Switch signal source_. | mini [(1)](#device-1);<br/>NOT WORK with mini-edge SDI [(3)](#api-v106) | _See details above_ |
 | BETA: Switch input signal channel (HDMI/SDI) | Select the input channel (HDMI or SDI) for numbered inputs, if supported by hardware. | mini-edge SDI [(2)](#device-2) | mini Series: mini-ISO, mini-edge SDI, mini-mx SDI [(3)](#api-v106) |
 | EXPERIMENTAL: Set T-BAR position | Set the T-BAR position to MIN or MAX. | _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| BETA: Set AFV (Audio Follow Video) | Enable or disable AFV for selected input (HDMI only?) | mini-edge SDI [(2)](#device-2) | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| BETA: Set AFV (Audio Follow Video) | Enable or disable AFV for selected input | mini-edge SDI [(2)](#device-2) | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 | EXPERIMENTAL:  Set LINE IN on/off | Turn on/off LINE IN | _Not tested yet_ | MSP Series: MSP 405 [(3)](#api-v106) |
 | EXPERIMENTAL: Set mixing audio | Turn on/off audio from sources |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 

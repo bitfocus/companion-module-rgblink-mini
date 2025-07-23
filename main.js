@@ -472,7 +472,7 @@ class MiniModuleInstance extends InstanceBase {
 					id: 'sourceNumber',
 					default: '1',
 					tooltip: 'Choose source number',
-					choices: SOURCE_CHOICES_PART,
+					choices: SOURCE_CHOICES_PART_ONLY_FOUR,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -884,7 +884,7 @@ class MiniModuleInstance extends InstanceBase {
 					id: 'sourceNumber',
 					default: '1',
 					tooltip: 'Choose source number',
-					choices: SOURCE_CHOICES_PART,
+					choices: SOURCE_CHOICES_PART_ONLY_FOUR,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -1579,7 +1579,7 @@ class MiniModuleInstance extends InstanceBase {
 			})
 		}
 
-		for (const item of SOURCE_CHOICES_PART) {
+		for (const item of SOURCE_CHOICES_PART_ONLY_FOUR) {
 			for (const item2 of AUDIO_ON_OFF_CHOICES) {
 				presets.push({
 					type: 'button',
