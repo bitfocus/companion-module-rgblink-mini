@@ -61,6 +61,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		lineInStatus: undefined,
 		mixingAudio: [],
 		audioVolume: [],
+		lineInVolume: undefined,
+		micInVolume: undefined,
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -123,6 +125,9 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			commands.push(new PollingCommand('81', '0F', '02', '00', '00')) // Read Audio Volume - HDMI 3
 			commands.push(new PollingCommand('81', '0F', '03', '00', '00')) // Read Audio Volume - HDMI 4
 			commands.push(new PollingCommand('81', '0F', '05', '00', '00')) // Read Audio Volume - Output
+
+			commands.push(new PollingCommand('81', '17', '00', '00', '00')) // LINE IN volume
+			commands.push(new PollingCommand('81', '17', '01', '00', '00')) // MIC IN volume
 		}
 
 		return commands
@@ -265,6 +270,22 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 	}
 
+	sendSetLineInVolume(volume) {
+		if (this.isLineInVolumeLevelValid(volume)) {
+			this.sendCommand('81', '16', '00', this.byteToTwoSignHex(volume), '00')
+		} else {
+			this.myWarn(`Bad LINE IN volume level ${volume}`)
+		}
+	}
+
+	sendSetMicInVolume(volume) {
+		if (this.isMicInVolumeLevelValid(volume)) {
+			this.sendCommand('81', '16', '01', this.byteToTwoSignHex(volume), '00')
+		} else {
+			this.myWarn(`Bad MIC IN volume level ${volume}`)
+		}
+	}
+
 	consume22(message) {
 		let prev = message[0]
 		if (prev <= 3) {
@@ -298,7 +319,15 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 	}
 
 	isVolumeLevelValid(volume) {
-		return volume >= 0 && volume <= 64
+		return volume >= 0 && volume <= 100
+	}
+
+	isLineInVolumeLevelValid(volume) {
+		return volume >= 0 && volume <= 0x1F
+	}
+
+	isMicInVolumeLevelValid(volume) {
+		return volume >= 0 && volume <= 8
 	}
 
 	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
@@ -426,6 +455,21 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 						this.emitConnectionStatusOK()
 						this.deviceStatus.audioFollowVideo[src] = onOff
 						return this.logFeedback(redeableMsg, 'AFV status for input:' + src + ' is:' + onOff)
+					}
+				} else if (DAT1 == '16' || DAT1 == '17') {
+					// 0x16/0x17 Extended audio volume setting
+					let lineMicIn = parseInt(DAT2)
+					let volume = parseInt(DAT3)
+					if (lineMicIn == 0 && this.isLineInVolumeLevelValid(volume)) {
+						// line in
+						this.emitConnectionStatusOK()
+						this.deviceStatus.lineInVolume = volume
+						return this.logFeedback(redeableMsg, 'LINE IN volume level:' + volume)
+					} else if (lineMicIn == 1 && this.isMicInVolumeLevelValid(volume)) {
+						// mic in
+						this.emitConnectionStatusOK()
+						this.deviceStatus.micInVolume = volume
+						return this.logFeedback(redeableMsg, 'MIC IN volume level:' + volume)
 					}
 				} else if (DAT1 == '0C' || DAT1 == '0D') {
 					// 0x0C/0x0D Mixing Audio

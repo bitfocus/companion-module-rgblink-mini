@@ -35,6 +35,17 @@ const INPUT_OUTPUT_AUDIO_VOLUME_CHOICES_PART = [
 	{ id: '5', label: 'Output' },
 ]
 
+const LINE_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART = []
+for (let i = 0; i <= 0x1F; i++) {
+	const value = (12 + (i * 1.5)).toFixed(1)
+	LINE_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART.push({ id: i, label: `${value} dB` })
+}
+
+const MIC_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART = []
+for (let i = 0; i <= 0x08; i++) {
+	const value = ((i * 5)).toFixed(0)
+	MIC_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART.push({ id: i, label: `${value} dB` })
+}
 
 const SOURCE_CHOICES_PART_ONLY_FOUR = SOURCE_CHOICES_PART.slice(0, -1)
 
@@ -588,13 +599,51 @@ class MiniModuleInstance extends InstanceBase {
 					label: 'Volume',
 					id: 'volume',
 					default: 0,
-					tooltip: 'Put value 0-64 (means volume 0-100)',
+					tooltip: 'Value 0-100',
 					min: 0,
-					max: 64,
+					max: 100,
 				},
 			],
 			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSetAudioVolume(action.options.inputOrOutput, action.options.volume)
+			},
+		}
+
+		actions['line_in_volume'] = {
+			name: 'EXPERIMENTAL: Set LINE IN volume',
+			description: 'Set volume for LINE IN.  Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Volume',
+					id: 'volume',
+					default: 0,
+					tooltip: 'Choose input or output',
+					choices: LINE_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSetLineInVolume(action.options.volume)
+			},
+		}
+
+		actions['mic_in_volume'] = {
+			name: 'EXPERIMENTAL: Set MIC IN volume',
+			description: 'Set volume for MIC IN.  Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Volume',
+					id: 'volume',
+					default: 0,
+					tooltip: 'Choose input or output',
+					choices: MIC_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSetMicInVolume(action.options.volume)
 			},
 		}
 
@@ -620,6 +669,8 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_line_in_status')
 		this.checkFeedbacks('set_mixing_audio')
 		this.checkFeedbacks('set_audio_volume')
+		this.checkFeedbacks('set_line_in_volume')
+		this.checkFeedbacks('set_mic_in_volume')
 	}
 
 	async configUpdated(config) {
@@ -1035,13 +1086,61 @@ class MiniModuleInstance extends InstanceBase {
 					label: 'Volume',
 					id: 'volume',
 					default: 0,
-					tooltip: 'Put value 0-64 (means volume 0-100)',
+					tooltip: 'Value 0-100',
 					min: 0,
-					max: 64,
+					max: 100,
 				},
 			],
 			callback: (feedback) => {
 				return (feedback.options.volume == this.apiConnector.deviceStatus.audioVolume[feedback.options.inputOrOutput])
+			},
+		}
+
+		feedbacks['set_line_in_volume'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL: LINE IN volume',
+			description: 'Check current LINE IN volume',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Volume',
+					id: 'volume',
+					default: 0,
+					tooltip: 'Choose input or output',
+					choices: LINE_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.volume == this.apiConnector.deviceStatus.lineInVolume)
+			},
+		}
+
+		feedbacks['set_mic_in_volume'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL: MIC IN volume',
+			description: 'Check current MIC IN volume',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Volume',
+					id: 'volume',
+					default: 0,
+					tooltip: 'Choose input or output',
+					choices: MIC_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.volume == this.apiConnector.deviceStatus.micInVolume)
 			},
 		}
 
@@ -1826,21 +1925,15 @@ class MiniModuleInstance extends InstanceBase {
 			})
 		}
 
-		const volumeExamples = [
-			{ volume: 0, label: 0 },
-			{ volume: 16, label: 25 },
-			{ volume: 32, label: 50 },
-			{ volume: 48, label: 75 },
-			{ volume: 64, label: 100 },
-		]
-		for (const item of volumeExamples) {
+		let inputOutputVolumeExamples = [0, 25, 50, 75, 100]
+		for (const volume of inputOutputVolumeExamples) {
 			for (const item2 of INPUT_OUTPUT_AUDIO_VOLUME_CHOICES_PART) {
 				presets.push({
 					type: 'button',
 					category: 'EXPERIMENTAL: Set audio volume',
-					name: 'EXPERIMENTAL: Set ' + item2.label + '\\nto ' + item.label,
+					name: 'EXPERIMENTAL: Set ' + item2.label + '\\nto ' + volume,
 					style: {
-						text: 'EXPERIMENTAL: Set ' + item2.label + '\\nto ' + item.label,
+						text: 'EXPERIMENTAL: Set ' + item2.label + '\\nto ' + volume,
 						size: 'auto',
 						color: this.TEXT_COLOR,
 						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -1852,7 +1945,7 @@ class MiniModuleInstance extends InstanceBase {
 									actionId: 'audio_volume',
 									options: {
 										inputOrOutput: item2.id,
-										volume: item.volume,
+										volume: volume,
 									},
 								},
 							],
@@ -1864,7 +1957,7 @@ class MiniModuleInstance extends InstanceBase {
 							feedbackId: 'set_audio_volume',
 							options: {
 								inputOrOutput: item2.id,
-								volume: item.volume,
+								volume: volume,
 							},
 							style: {
 								color: this.TEXT_COLOR,
@@ -1876,6 +1969,83 @@ class MiniModuleInstance extends InstanceBase {
 			}
 		}
 
+		for (const item of LINE_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART) {
+			presets.push({
+				type: 'button',
+				category: 'EXPERIMENTAL: Set LINE IN volume',
+				name: 'EXPERIMENTAL: Set LINE IN ' + item.label,
+				style: {
+					text: 'EXPERIMENTAL: Set LINE IN ' + item.label,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'line_in_volume',
+								options: {
+									volume: item.id,
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'set_line_in_volume',
+						options: {
+							volume: item.id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+
+		for (const item of MIC_IN_AUDIO_VOLUME_LEVEL_CHOICES_PART) {
+			presets.push({
+				type: 'button',
+				category: 'EXPERIMENTAL: Set MIC IN volume',
+				name: 'EXPERIMENTAL: Set MIC IN ' + item.label,
+				style: {
+					text: 'EXPERIMENTAL: Set MIC IN ' + item.label,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'mic_in_volume',
+								options: {
+									volume: item.id,
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'set_mic_in_volume',
+						options: {
+							volume: item.id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
 
 		this.setPresetDefinitions(presets)
 	}

@@ -22,6 +22,8 @@ Devices must be controlled over a network — USB control is NOT supported.
 | EXPERIMENTAL:  Set LINE IN on/off | Turn on/off LINE IN | _Not tested yet_ | MSP Series: MSP 405 [(3)](#api-v106) |
 | EXPERIMENTAL: Set mixing audio | Turn on/off audio from sources |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 | EXPERIMENTAL: Set audio volume | Set audio volume for inputs and output |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| EXPERIMENTAL: Set LINE IN audio volume | Set volume for LINE IN |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| EXPERIMENTAL: Set MIC IN audio volume | Set volume for MIC IN |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 
 ### <a name="tested-with"></a>(*) Tested with devices
 
@@ -51,3 +53,5 @@ There are a few feedbacks available, similar to actions. See presets for usage e
 - Added EXPERIMENTAL action _Set AFV (Audio Follow Video)_ (not yet tested)
 - Added EXPERIMENTAL action _Set LINE IN on/off_ (not yet tested)
 - Added EXPERIMENTAL action _Set audio volume_ (not yet tested)
+- Added EXPERIMENTAL action _Set LINE IN audio volume_ (not yet tested)
+- Added EXPERIMENTAL action _Set MIC IN audio volume_ (not yet tested)
