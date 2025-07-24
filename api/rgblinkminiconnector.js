@@ -59,7 +59,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		tBarPosition: undefined,
 		audioFollowVideo: [],
 		lineInStatus: undefined,
-		mixingAudio:[],
+		mixingAudio: [],
+		audioVolume: [],
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -113,8 +114,15 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			commands.push(new PollingCommand('81', '09', '02', '00', '00')) // Read Audio Follow Video - HDMI 3
 			commands.push(new PollingCommand('81', '09', '03', '00', '00')) // Read Audio Follow Video - HDMI 4
 			commands.push(new PollingCommand('81', '09', '04', '00', '00')) // Read Audio Follow Video - is it works?
+
 			commands.push(new PollingCommand('81', '0D', '00', '00', '00')) // Read Mixing Audio for PST
 			commands.push(new PollingCommand('81', '0D', '01', '00', '00')) // Read Mixing Audio for PGM
+
+			commands.push(new PollingCommand('81', '0F', '00', '00', '00')) // Read Audio Volume - HDMI 1
+			commands.push(new PollingCommand('81', '0F', '01', '00', '00')) // Read Audio Volume - HDMI 2
+			commands.push(new PollingCommand('81', '0F', '02', '00', '00')) // Read Audio Volume - HDMI 3
+			commands.push(new PollingCommand('81', '0F', '03', '00', '00')) // Read Audio Volume - HDMI 4
+			commands.push(new PollingCommand('81', '0F', '05', '00', '00')) // Read Audio Volume - Output
 		}
 
 		return commands
@@ -245,6 +253,18 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 	}
 
+	sendSetAudioVolume(inputOrOutput, volume) {
+		if (this.isInputOrOutputAudioValid(inputOrOutput)) {
+			if (this.isVolumeLevelValid(volume)) {
+				this.sendCommand('81', '0E', this.byteToTwoSignHex(inputOrOutput), this.byteToTwoSignHex(volume), '00')
+			} else {
+				this.myWarn(`Bad volume level: ${volume}`)
+			}
+		} else {
+			this.myWarn(`Bad input or output number: ${inputOrOutput}`)
+		}
+	}
+
 	consume22(message) {
 		let prev = message[0]
 		if (prev <= 3) {
@@ -271,6 +291,14 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 
 	isOnOffValid(onOff) {
 		return (onOff == 0 || onOff == 1)
+	}
+
+	isInputOrOutputAudioValid(inputOrOutput) {
+		return (inputOrOutput == 5 || (inputOrOutput >= 0 && inputOrOutput <= 3))
+	}
+
+	isVolumeLevelValid(volume) {
+		return volume >= 0 && volume <= 64
 	}
 
 	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
@@ -407,6 +435,15 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 						this.emitConnectionStatusOK()
 						this.deviceStatus.mixingAudio[outputPstOrPgm] = onOffValue
 						return this.logFeedback(redeableMsg, `Mixing audio value for ${outputPstOrPgm} is ${onOffValue}`)
+					}
+				} else if (DAT1 == '0E' || DAT1 == '0F') {
+					// 0x0E/0x0F HDMI and output audio volume setting
+					let inputOrOutput = parseInt(DAT2)
+					let volume = parseInt(DAT3, this.PARSE_INT_HEX_MODE)
+					if (this.isInputOrOutputAudioValid(inputOrOutput) && this.isVolumeLevelValid(volume)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.audioVolume[inputOrOutput] = volume
+						return this.logFeedback(redeableMsg, `Audio volume for ${inputOrOutput} is ${volume}`)
 					}
 				}
 			}

@@ -27,6 +27,15 @@ const SOURCE_CHOICES_PART = [
 	{ id: '5', label: '5 (BETA - if the hardware has)' },
 ]
 
+const INPUT_OUTPUT_AUDIO_VOLUME_CHOICES_PART = [
+	{ id: '0', label: 'Input 1' },
+	{ id: '1', label: 'Input 2' },
+	{ id: '2', label: 'Input 3' },
+	{ id: '3', label: 'Input 4' },
+	{ id: '5', label: 'Output' },
+]
+
+
 const SOURCE_CHOICES_PART_ONLY_FOUR = SOURCE_CHOICES_PART.slice(0, -1)
 
 const SWITCH_MODE_CHOICES_PART = [
@@ -561,12 +570,37 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		actions['audio_volume'] = {
+			name: 'EXPERIMENTAL: Set audio volume',
+			description: 'Set audio volume for inputs and output.  Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Input or output',
+					id: 'inputOrOutput',
+					default: 0,
+					tooltip: 'Choose input or output',
+					choices: INPUT_OUTPUT_AUDIO_VOLUME_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'number',
+					label: 'Volume',
+					id: 'volume',
+					default: 0,
+					tooltip: 'Put value 0-64 (means volume 0-100)',
+					min: 0,
+					max: 64,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendSetAudioVolume(action.options.inputOrOutput, action.options.volume)
+			},
+		}
+
 		/*
 		   actions to consider		
-		   0x0C/0x0D Mixing Audio Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO (V1.0.6)
-		   0x0E/0x0F HDMI and output audio volume setting Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO
 		   0x16/0x17 Extended audio volume setting Supported devices: mini Series:mini-pro,mini-pro v3,mini-ISO
-		   E0/E1 - a lot of streaming actions
 		 */
 
 		this.setActionDefinitions(actions)
@@ -585,6 +619,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_audio_follow_video')
 		this.checkFeedbacks('set_line_in_status')
 		this.checkFeedbacks('set_mixing_audio')
+		this.checkFeedbacks('set_audio_volume')
 	}
 
 	async configUpdated(config) {
@@ -974,6 +1009,39 @@ class MiniModuleInstance extends InstanceBase {
 					(feedback.options.onOff2 << 1) |
 					(feedback.options.onOff1 << 0)
 				return (value == this.apiConnector.deviceStatus.mixingAudio[feedback.options.output])
+			},
+		}
+
+		feedbacks['set_audio_volume'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL: Current audio volume',
+			description: 'Check current audio volume for selected input or output',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Input or output',
+					id: 'inputOrOutput',
+					default: 0,
+					tooltip: 'Choose input or output',
+					choices: INPUT_OUTPUT_AUDIO_VOLUME_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+				{
+					type: 'number',
+					label: 'Volume',
+					id: 'volume',
+					default: 0,
+					tooltip: 'Put value 0-64 (means volume 0-100)',
+					min: 0,
+					max: 64,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.volume == this.apiConnector.deviceStatus.audioVolume[feedback.options.inputOrOutput])
 			},
 		}
 
@@ -1757,6 +1825,57 @@ class MiniModuleInstance extends InstanceBase {
 				],
 			})
 		}
+
+		const volumeExamples = [
+			{ volume: 0, label: 0 },
+			{ volume: 16, label: 25 },
+			{ volume: 32, label: 50 },
+			{ volume: 48, label: 75 },
+			{ volume: 64, label: 100 },
+		]
+		for (const item of volumeExamples) {
+			for (const item2 of INPUT_OUTPUT_AUDIO_VOLUME_CHOICES_PART) {
+				presets.push({
+					type: 'button',
+					category: 'EXPERIMENTAL: Set audio volume',
+					name: 'EXPERIMENTAL: Set ' + item2.label + '\\nto ' + item.label,
+					style: {
+						text: 'EXPERIMENTAL: Set ' + item2.label + '\\nto ' + item.label,
+						size: 'auto',
+						color: this.TEXT_COLOR,
+						bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+					},
+					steps: [
+						{
+							down: [
+								{
+									actionId: 'audio_volume',
+									options: {
+										inputOrOutput: item2.id,
+										volume: item.volume,
+									},
+								},
+							],
+							up: [],
+						},
+					],
+					feedbacks: [
+						{
+							feedbackId: 'set_audio_volume',
+							options: {
+								inputOrOutput: item2.id,
+								volume: item.volume,
+							},
+							style: {
+								color: this.TEXT_COLOR,
+								bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+							},
+						},
+					],
+				})
+			}
+		}
+
 
 		this.setPresetDefinitions(presets)
 	}
