@@ -1,6 +1,6 @@
 {
   "name": "rgblink-mini",
-  "version": "2.1.0-RC5",
+  "version": "2.1.0-RC6",
   "main": "main.js",
   "scripts": {
     "format": "prettier -w ."
