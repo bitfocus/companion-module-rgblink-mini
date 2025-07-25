@@ -52,6 +52,7 @@ There are a few feedbacks available, similar to actions. See presets for usage e
 - Added EXPERIMENTAL action _Set T-BAR position_ (not yet tested)
 - Added EXPERIMENTAL action _Set AFV (Audio Follow Video)_ (not yet tested)
 - Added EXPERIMENTAL action _Set LINE IN on/off_ (not yet tested)
+- Added EXPERIMENTAL action _Set mixing audio_ (not yet tested)
 - Added EXPERIMENTAL action _Set audio volume_ (not yet tested)
 - Added EXPERIMENTAL action _Set LINE IN audio volume_ (not yet tested)
 - Added EXPERIMENTAL action _Set MIC IN audio volume_ (not yet tested)
