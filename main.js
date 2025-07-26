@@ -94,6 +94,12 @@ const TRANSITION_TYPE_CHOICES_PART = [
 	{ id: 1, label: 'CUT / Black take' },
 ]
 
+const SCENES_VIEWS_CHOICES_PART = []
+for (let i = 1; i <= 16; i++) {
+	SCENES_VIEWS_CHOICES_PART.push({ id: i - 1, label: `scene/view ${i}` })
+}
+
+
 class MiniModuleInstance extends InstanceBase {
 	BACKGROUND_COLOR_PREVIEW
 	BACKGROUND_COLOR_ON_AIR
@@ -376,6 +382,26 @@ class MiniModuleInstance extends InstanceBase {
 			],
 			callback: async (action /*, bank*/) => {
 				this.apiConnector.sendSwitchPipLayerMessage(action.options.layer)
+			},
+		}
+
+		// Load scene
+		actions['load_scene_view'] = {
+			name: 'EXPERIMENTAL: Load scene/view to Preview (PVM)',
+			description: 'Load saved earlier scene/view to Preview. Not yet tested. Should be compatible with mini-kind devices, which support scenes.',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Scene/view number',
+					id: 'scene',
+					default: '1',
+					// tooltip: 'Choose source number to switch channel',
+					choices: SCENES_VIEWS_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendLoadScene(action.options.scene)
 			},
 		}
 
@@ -696,6 +722,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_line_in_volume')
 		this.checkFeedbacks('set_mic_in_volume')
 		this.checkFeedbacks('set_perform_transition')
+		this.checkFeedbacks('set_load_scene_view')
 	}
 
 	async configUpdated(config) {
@@ -896,6 +923,30 @@ class MiniModuleInstance extends InstanceBase {
 			],
 			callback: (feedback) => {
 				return (feedback.options.type == this.apiConnector.deviceStatus.channelsForInput[feedback.options.sourceNumber])
+			},
+		}
+
+		feedbacks['set_load_scene_view'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL: Last loaded scene/view to Preview (PVM)',
+			description: 'Last loaded scene/view to Preview (PVM)',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Scene/view number',
+					id: 'scene',
+					default: '1',
+					// tooltip: 'Choose source number to switch channel',
+					choices: SCENES_VIEWS_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.scene == this.apiConnector.deviceStatus.lastLoadedScene)
 			},
 		}
 
@@ -2091,6 +2142,45 @@ class MiniModuleInstance extends InstanceBase {
 						style: {
 							color: this.TEXT_COLOR,
 							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+
+		for (const item of SCENES_VIEWS_CHOICES_PART) {
+			presets.push({
+				type: 'button',
+				category: 'EXPERIMENTAL: Load scene',
+				name: 'EXPERIMENTAL: Load\n' + item.label,
+				style: {
+					text: 'EXPERIMENTAL: Load\n' + item.label,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'load_scene_view',
+								options: {
+									scene: item.id,
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'set_load_scene_view',
+						options: {
+							scene: item.id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_PREVIEW,
 						},
 					},
 				],

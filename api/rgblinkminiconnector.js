@@ -64,6 +64,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		lineInVolume: undefined,
 		micInVolume: undefined,
 		lastTransitionType: undefined,
+		lastLoadedScene: undefined,
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -295,6 +296,14 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 	}
 
+	sendLoadScene(scene) {
+		if (this.isSceneNumberValid(scene)) {
+			this.sendCommand('68', '24', this.byteToTwoSignHex(scene), '00', '00')
+		} else {
+			this.myWarn(`Bad scene number: ${scene}`)
+		}
+	}
+
 	consume22(message) {
 		let prev = message[0]
 		if (prev <= 3) {
@@ -343,6 +352,10 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		return (onOff == 0 || onOff == 1)
 	}
 
+	isSceneNumberValid(scene) {
+		return scene >= 0 && scene <= 16
+	}
+
 	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
 		let redeableMsg = [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4].join(' ')
 		try {
@@ -356,12 +369,21 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			if (CMD == '68') {
 				// 0x68 Establish/disconnect communication
 				// eg. '<F00006866010000CF>';
-				if (DAT2 == '00') {
-					this.emitConnectionStatusOK()
-					return this.logFeedback(redeableMsg, 'Device disconnected')
-				} else if (DAT2 == '01') {
-					this.emitConnectionStatusOK()
-					return this.logFeedback(redeableMsg, 'Device connected')
+				if (DAT1 == '24' || DAT1 == '25') {
+					let scene = parseInt(DAT2, this.PARSE_INT_HEX_MODE)
+					if (this.isSceneNumberValid(scene)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.lastLoadedScene = scene
+						return this.logFeedback(redeableMsg, `Loaded scene: ${scene} `)
+					}
+				} else if (DAT1 == '66' || DAT1 == '67') {
+					if (DAT2 == '00') {
+						this.emitConnectionStatusOK()
+						return this.logFeedback(redeableMsg, 'Device disconnected')
+					} else if (DAT2 == '01') {
+						this.emitConnectionStatusOK()
+						return this.logFeedback(redeableMsg, 'Device connected')
+					}
 				}
 			} else if (CMD == '73') {
 				// 0x73 Switch input signal channel: HDMI/SDI
