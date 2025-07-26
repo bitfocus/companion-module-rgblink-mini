@@ -11,6 +11,7 @@ Devices must be controlled over a network — USB control is NOT supported.
 | Switch signal source | Similar to pressing the 1/2/3/4/5 source button on the device. 5th input is in BETA. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 | Switch mode (T-BAR/Auto) | Choose between T-BAR or Auto mode for switching. | mini [(1)](#device-1);<br/>mini-edge SDI [(2)](#device-2) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 | Select source and target | Combines _Switch signal source_ and _Switch mode (T-BAR/Auto)_. May behave differently than expected. 5th input is in BETA. | mini [(1)](#device-1);<br/>mini-edge SDI [(2)](#device-2) | _See details above_ |
+| EXPERIMENTAL: Performs a transition between Program and Preview | Performs a transition between Program and Preview (TAKE/CUT) | Not tested yet | Take mentioned in mini-pro [(2)](#api-mini-pro);<br/>Q Series:Q16pro Gen2 1U, FLEX Series:FLEXpro 16,FLEXpro 4 [(3)](#api-v106)
 | BETA: Switch signal source (PST or PGM) | Switch the selected signal to PST or PGM. Likely a better alternative to _Select source and target_, but untested on _mini_. | mini-edge SDI [(2)](#device-2) | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) (Note: PST command is the same as _Switch signal source_, which is compatible with mini/mini-pro) |
 | Set switch effect | Set a transition effect, such as cut or fade. See hardware manual or presets for more. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
 | Select PIP mode | Select picture-in-picture mode (off, center, top, bottom, left, right, etc.). | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
@@ -50,9 +51,10 @@ There are a few feedbacks available, similar to actions. See presets for usage e
 - Added BETA action _Switch signal source (PST or PGM)_, intended as a better alternative to _Select source and target_ (not tested on _mini_)
 - Added BETA action _Switch input signal channel (HDMI/SDI)_ for devices with 4 HDMI and 4 SDI inputs
 - Added EXPERIMENTAL action _Set T-BAR position_ (not yet tested)
-- Added EXPERIMENTAL action _Set AFV (Audio Follow Video)_ (not yet tested)
+- Added BETA action _Set AFV (Audio Follow Video)_
 - Added EXPERIMENTAL action _Set LINE IN on/off_ (not yet tested)
 - Added EXPERIMENTAL action _Set mixing audio_ (not yet tested)
 - Added EXPERIMENTAL action _Set audio volume_ (not yet tested)
 - Added EXPERIMENTAL action _Set LINE IN audio volume_ (not yet tested)
 - Added EXPERIMENTAL action _Set MIC IN audio volume_ (not yet tested)
+- Added EXPERIMENTAL action _Performs a transition between Program and Preview_ (Take/CUT) (not yet tested)

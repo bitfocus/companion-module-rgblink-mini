@@ -63,6 +63,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		audioVolume: [],
 		lineInVolume: undefined,
 		micInVolume: undefined,
+		lastTransitionType: undefined,
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -286,6 +287,14 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 	}
 
+	sendPerformTransition(transitionType) {
+		if (this.isTransitionTypeValid(transitionType)) {
+			this.sendCommand('78', '00', '00', this.byteToTwoSignHex(transitionType), '00')
+		} else {
+			this.myWarn(`Bad transition type: ${transitionType}`)
+		}
+	}
+
 	consume22(message) {
 		let prev = message[0]
 		if (prev <= 3) {
@@ -328,6 +337,10 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 
 	isMicInVolumeLevelValid(volume) {
 		return volume >= 0 && volume <= 8
+	}
+
+	isTransitionTypeValid(onOff) {
+		return (onOff == 0 || onOff == 1)
 	}
 
 	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
@@ -403,16 +416,15 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 				}
 			} else if (CMD == '78') {
 				// 0x78 Switching Setting
-				if (DAT1 == '12' || DAT1 == '13') {
-					// T-BAR/Auto
-					if (DAT2 == '00') {
+				if (DAT1 == '00' || DAT1 == '01') {
+					// 0x78 Set the special effect switching operation
+					// 0x00 Set the switch mode
+					// TAKE/CUT
+					let transitionType = parseInt(DAT3)
+					if (this.isTransitionTypeValid(transitionType)) {
 						this.emitConnectionStatusOK()
-						this.deviceStatus.switchMode = parseInt(DAT2)
-						return this.logFeedback(redeableMsg, 'Swtich mode Auto')
-					} else if (DAT2 == '01') {
-						this.emitConnectionStatusOK()
-						this.deviceStatus.switchMode = parseInt(DAT2)
-						return this.logFeedback(redeableMsg, 'Swtich mode T-BAR')
+						this.deviceStatus.lastTransitionType = transitionType
+						return this.logFeedback(redeableMsg, 'Transition type: ' + transitionType)
 					}
 				} else if (DAT1 == '06' || DAT1 == '07') {
 					// Switching effect setting
@@ -428,6 +440,17 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 					this.emitConnectionStatusOK()
 					this.deviceStatus.tBarPosition = position
 					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
+				} else if (DAT1 == '12' || DAT1 == '13') {
+					// T-BAR/Auto
+					if (DAT2 == '00') {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.switchMode = parseInt(DAT2)
+						return this.logFeedback(redeableMsg, 'Swtich mode Auto')
+					} else if (DAT2 == '01') {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.switchMode = parseInt(DAT2)
+						return this.logFeedback(redeableMsg, 'Swtich mode T-BAR')
+					}
 				}
 			} else if (CMD == 'A2') {
 				if (DAT1 == '18') {

@@ -89,6 +89,11 @@ const AUDIO_ON_OFF_CHOICES = [
 	{ id: 1, label: 'ON' },
 ]
 
+const TRANSITION_TYPE_CHOICES_PART = [
+	{ id: 0, label: 'TAKE / Scene take' },
+	{ id: 1, label: 'CUT / Black take' },
+]
+
 class MiniModuleInstance extends InstanceBase {
 	BACKGROUND_COLOR_PREVIEW
 	BACKGROUND_COLOR_ON_AIR
@@ -463,6 +468,25 @@ class MiniModuleInstance extends InstanceBase {
 			},
 		}
 
+		actions['perform_transition'] = {
+			name: 'EXPERIMENTAL: Performs a transition between Program and Preview',
+			description: 'Performs a transition between Program and Preview (TAKE/CUT). Not yet tested.',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Transition type',
+					id: 'transitionType',
+					default: 0,
+					// tooltip: 'Choose position',
+					choices: TRANSITION_TYPE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: async (action /*, bank*/) => {
+				this.apiConnector.sendPerformTransition(action.options.transitionType)
+			},
+		}
+
 		actions['line_in_status'] = {
 			name: 'EXPERIMENTAL: Set LINE IN on/off',
 			description: 'Turn on/off LINE IN. Not yet tested. Based on API v1.0.6 20250611, is it possible on MSP Series: MSP 405',
@@ -671,6 +695,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.checkFeedbacks('set_audio_volume')
 		this.checkFeedbacks('set_line_in_volume')
 		this.checkFeedbacks('set_mic_in_volume')
+		this.checkFeedbacks('set_perform_transition')
 	}
 
 	async configUpdated(config) {
@@ -928,6 +953,31 @@ class MiniModuleInstance extends InstanceBase {
 			],
 			callback: (feedback) => {
 				return (feedback.options.position == this.apiConnector.deviceStatus.tBarPosition)
+			},
+		}
+
+
+		feedbacks['set_perform_transition'] = {
+			type: 'boolean',
+			name: 'EXPERIMENTAL: Last transition between Program and Preview',
+			description: 'What was the last transition',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Transition type',
+					id: 'transitionType',
+					default: 0,
+					// tooltip: 'Choose position',
+					choices: TRANSITION_TYPE_CHOICES_PART,
+					minChoicesForSearch: 0,
+				},
+			],
+			callback: (feedback) => {
+				return (feedback.options.transitionType == this.apiConnector.deviceStatus.lastTransitionType)
 			},
 		}
 
@@ -2037,6 +2087,45 @@ class MiniModuleInstance extends InstanceBase {
 						feedbackId: 'set_mic_in_volume',
 						options: {
 							volume: item.id,
+						},
+						style: {
+							color: this.TEXT_COLOR,
+							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+						},
+					},
+				],
+			})
+		}
+
+		for (const item of TRANSITION_TYPE_CHOICES_PART) {
+			presets.push({
+				type: 'button',
+				category: 'EXPERIMENTAL: Performs transition',
+				name: 'EXPERIMENTAL: Performs transition\n' + item.label,
+				style: {
+					text: 'EXPERIMENTAL: Performs transition\n' + item.label,
+					size: 'auto',
+					color: this.TEXT_COLOR,
+					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'perform_transition',
+								options: {
+									transitionType: item.id,
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'set_perform_transition',
+						options: {
+							transitionType: item.id,
 						},
 						style: {
 							color: this.TEXT_COLOR,
