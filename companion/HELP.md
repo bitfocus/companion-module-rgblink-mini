@@ -6,26 +6,26 @@ Devices must be controlled over a network — USB control is NOT supported.
 
 ## **Available Actions**
 
-| Action | Description | Tested with ([* devices list](#tested-with))| Declarative API Compatibility ([** API Specifications](#api-list)) |
-|--------|-------------|--------------------------|----------------------------------|
-| Switch signal source | Similar to pressing the 1/2/3/4/5 source button on the device. 5th input is in BETA. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| Switch mode (T-BAR/Auto) | Choose between T-BAR or Auto mode for switching. | mini [(1)](#device-1);<br/>mini-edge SDI [(2)](#device-2) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| Select source and target | Combines _Switch signal source_ and _Switch mode (T-BAR/Auto)_. May behave differently than expected. 5th input is in BETA. | mini [(1)](#device-1);<br/>mini-edge SDI [(2)](#device-2) | _See details above_ |
-| EXPERIMENTAL: Performs a transition between Program and Preview | Performs a transition between Program and Preview (TAKE/CUT) | Not tested yet | Take mentioned in mini-pro [(2)](#api-mini-pro);<br/>Q Series:Q16pro Gen2 1U, FLEX Series:FLEXpro 16,FLEXpro 4 [(3)](#api-v106);<br/> mini-edge SDI (email) [(4)](#mail-20250726)|
-| BETA: Switch signal source (PST or PGM) | Switch the selected signal to PST or PGM. Likely a better alternative to _Select source and target_, but untested on _mini_. | mini-edge SDI [(2)](#device-2) | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) (Note: PST command is the same as _Switch signal source_, which is compatible with mini/mini-pro) |
-| Set switch effect | Set a transition effect, such as cut or fade. See hardware manual or presets for more. | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| EXPERIMENTAL: Load scene/view to Preview (PVM) | Load saved earlier scene/view to Preview | Not tested yet | mini-pro [(2)](#api-mini-pro);<br/>mini-edge SDI (email) [(4)](#mail-20250726) |
-| Select PIP mode | Select picture-in-picture mode (off, center, top, bottom, left, right, etc.). | mini [(1)](#device-1) | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| Select PIP layer (A or B) | Select the PIP layer before setting the signal source. | mini [(1)](#device-1) | _Undocumented_ |
-| Build PIP from selected sources | Set PIP mode, select two sources and output (Live or Preview). Combines _Select PIP mode_, _Select PIP layer (A or B)_, and _Switch signal source_. | mini [(1)](#device-1);<br/>NOT WORK with mini-edge SDI [(3)](#api-v106) | _See details above_ |
-| BETA: Switch input signal channel (HDMI/SDI) | Select the input channel (HDMI or SDI) for numbered inputs, if supported by hardware. | mini-edge SDI [(2)](#device-2) | mini Series: mini-ISO, mini-edge SDI, mini-mx SDI [(3)](#api-v106) |
-| EXPERIMENTAL: Set T-BAR position | Set the T-BAR position to MIN or MAX. | _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| BETA: Set AFV (Audio Follow Video) | Enable or disable AFV for selected input | mini-edge SDI [(2)](#device-2) | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| EXPERIMENTAL:  Set LINE IN on/off | Turn on/off LINE IN | _Not tested yet_ | MSP Series: MSP 405 [(3)](#api-v106) |
-| EXPERIMENTAL: Set mixing audio | Turn on/off audio from sources |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| EXPERIMENTAL: Set audio volume | Set audio volume for inputs and output |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| EXPERIMENTAL: Set LINE IN audio volume | Set volume for LINE IN |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
-| EXPERIMENTAL: Set MIC IN audio volume | Set volume for MIC IN |  _Not tested yet_ | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) |
+| Action | Description | Declarative API Compatibility ([** API Specifications](#api-list)) | Test results with mini [(*1)](#device-1) | Test results with mini-edge SDI [(*2)](#device-2) |
+|--------|-------------|------------------------------------------------------------|--|--|
+| Switch signal source | Similar to pressing the 1/2/3/4/5 source button on the device. 5th input is in BETA. | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | 🟩 OK | ⬜ Not tested yet |
+| Switch mode (T-BAR/Auto) | Choose between T-BAR or Auto mode for switching. |  mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | 🟩 OK | ⬜ Not tested yet |
+| Select source and target | Combines <span style="color:gray">_Switch signal source_</span> and <span style="color:gray">_Switch mode (T-BAR/Auto)_</span>. 5th input is in BETA. | _See details for combined actions_ | 🟨 As I remember, it works, but setting PGM also sets PST | ⬜ Not tested yet |
+| EXPERIMENTAL: Performs a transition between Program and Preview | Performs a transition between Program and Preview (TAKE/CUT) | Take mentioned in mini-pro [(2)](#api-mini-pro);<br/>Q Series:Q16pro Gen2 1U, FLEX Series:FLEXpro 16,FLEXpro 4 [(3)](#api-v106);<br/> mini-edge SDI (email) [(4)](#mail-20250726)| ⬜ Not tested yet | ⬜ Not tested yet |
+| BETA: Switch signal source (PST or PGM) | Switch the selected signal to PST or PGM. Likely a better alternative to <span style="color:gray">_Select source and target_</span>, but untested on _mini_. | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) (Note: PST command is the same as _Switch signal source_, which is compatible with mini/mini-pro) | ⬜ Not tested yet | ⬜ Not tested yet |
+| Set switch effect | Set a transition effect, such as cut or fade. See hardware manual or presets for more. | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | 🟩 OK | ⬜ Not tested yet |
+| EXPERIMENTAL: Load scene/view to Preview (PVM) | Load saved earlier scene/view to Preview | mini-pro [(2)](#api-mini-pro);<br/>mini-edge SDI (email) [(4)](#mail-20250726) | ⬜ Not tested yet | ⬜ Not tested yet |
+| Select PIP mode | Select picture-in-picture mode (off, center, top, bottom, left, right, etc.). | mini [(1)](#api-mini);<br/>mini-pro [(2)](#api-mini-pro);<br/>mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | 🟩 OK | ⬜ Not tested yet |
+| Select PIP layer (A or B) | Select the PIP layer before setting the signal source. | _Undocumented_ | 🟩 OK | ⬜ Not tested yet |
+| Build PIP from selected sources | Set PIP mode, select two sources and output (Live or Preview). Combines <span style="color:gray">_Select PIP mode_</span>, <span style="color:gray">_Select PIP layer (A or B)_</span>, and <span style="color:gray">_Switch signal source_</span>. | _See details for combined actions_ | 🟩 OK | ⬜ Not tested yet |
+| BETA: Switch input signal channel (HDMI/SDI) | Select the input channel (HDMI or SDI) for numbered inputs, if supported by hardware. | mini Series: mini-ISO, mini-edge SDI, mini-mx SDI [(3)](#api-v106) | ⬜ Not tested yet | ⬜ Not tested yet |
+| EXPERIMENTAL: Set T-BAR position | Set the T-BAR position to MIN or MAX. | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | ⬜ Not tested yet | ⬜ Not tested yet |
+| BETA: Set AFV (Audio Follow Video) | Enable or disable AFV for selected input | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | ⬜ Not tested yet | ⬜ Not tested yet |
+| EXPERIMENTAL:  Set LINE IN on/off | Turn on/off LINE IN | MSP Series: MSP 405 [(3)](#api-v106) | ⬜ Not tested yet | ⬜ Not tested yet |
+| EXPERIMENTAL: Set mixing audio | Turn on/off audio from sources | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | ⬜ Not tested yet | ⬜ Not tested yet |
+| EXPERIMENTAL: Set audio volume | Set audio volume for inputs and output |  mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | ⬜ Not tested yet | ⬜ Not tested yet |
+| EXPERIMENTAL: Set LINE IN audio volume | Set volume for LINE IN | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | ⬜ Not tested yet | ⬜ Not tested yet |
+| EXPERIMENTAL: Set MIC IN audio volume | Set volume for MIC IN | mini Series: mini-pro, mini-pro v3, mini-ISO [(3)](#api-v106) | ⬜ Not tested yet | ⬜ Not tested yet |
 
 ### <a name="tested-with"></a>(*) Tested with devices
 
