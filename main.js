@@ -1765,8 +1765,13 @@ class MiniModuleInstance extends InstanceBase {
 			}
 		}
 
+		let colorsForPstPgm = []
+		colorsForPstPgm[OUTPUT_PST_PREVIEW] = this.BACKGROUND_COLOR_PREVIEW
+		colorsForPstPgm[OUTPUT_PGM_PROGRAM] = this.BACKGROUND_COLOR_ON_AIR
+
 		for (const item of SOURCE_CHOICES_PART) {
 			for (const item2 of SIGNAL_SWITCH_OUTPUT_CHOICES_PART) {
+				let color
 				presets.push({
 					type: 'button',
 					category: 'BETA: Switch signal source (PST or PGM)',
@@ -1800,7 +1805,7 @@ class MiniModuleInstance extends InstanceBase {
 							},
 							style: {
 								color: this.TEXT_COLOR,
-								bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+								bgcolor: colorsForPstPgm[item2.id],
 							},
 						},
 					],
@@ -1972,7 +1977,7 @@ class MiniModuleInstance extends InstanceBase {
 						},
 						style: {
 							color: this.TEXT_COLOR,
-							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+							bgcolor: colorsForPstPgm[item.id],
 						},
 					},
 				],
@@ -2019,7 +2024,7 @@ class MiniModuleInstance extends InstanceBase {
 						},
 						style: {
 							color: this.TEXT_COLOR,
-							bgcolor: this.BACKGROUND_COLOR_ON_AIR,
+							bgcolor: colorsForPstPgm[item.id],
 						},
 					},
 				],

@@ -413,7 +413,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 							this.deviceStatus.lastSourceOnOutput[output] = src
 						}
 						// lets try - end
-						return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource)
+						let outputName = (output == OUTPUT_PST_PREVIEW ? 'PST' : (output == OUTPUT_PGM_PROGRAM ? 'PGM' : `unrecognized:${output}`))
+						return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource + ' for ' + outputName)
 					}
 				} else if (DAT1 == '1A' || DAT1 == '1B') {
 					// T0000751B00000090 PIP layer (A or B)
