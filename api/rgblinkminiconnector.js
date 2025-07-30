@@ -44,6 +44,28 @@ const SWITCH_EFFECT = {
 	0xe: '<-O->',
 }
 
+const KNOWN_DEVICE_MODEL_VERSIONS = {
+	'220000': 'X2',
+	'320000': 'X3',
+	'700000': 'X7',
+	'A00000': 'X8',
+	'800000': 'X14',
+	'230100': 'FLEX 4ML',
+	'240100': 'FLEX 8',
+	'240000': 'FLEX 16',
+	'241000': 'FLEX 32',
+	'250000': 'FLEXpro 8',
+	'629000': 'D4',
+	'2C0100': 'GX4',
+	'2C0106': 'GX4pro',
+	'2C0107': 'X1Gpro',
+	'271000': 'Q16pro Gen2 4U',
+	'271001': 'Q16pro Gen2 4U (With h264 preview function)',
+	'271100': 'Q16pro Gen2 2U',
+	'271101': 'Q16pro Gen2 2U (With h264 preview function)',
+	'353200': 'MSP 405',
+}
+
 class RGBLinkMiniConnector extends RGBLinkApiConnector {
 	EVENT_NAME_ON_DEVICE_STATE_CHANGED = 'on_device_state_changed'
 
@@ -65,6 +87,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		micInVolume: undefined,
 		lastTransitionType: undefined,
 		lastLoadedScene: undefined,
+		deviceModelKey: undefined,
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -100,6 +123,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		commands.push(new PollingCommand('78', '07', '00', '00', '00')) // asking about switch effect
 		commands.push(new PollingCommand('75', '1B', '00', '00', '00')) // asking about PIP layer (A or B)
 		commands.push(new PollingCommand('F1', '40', '01', '00', '00')) // asking about special status 22
+		commands.push(new PollingCommand('68', '01', '00', '00', '00')) // read device model
 
 		if (this.config.pollingEdge) {
 			// mini-iso、mini-edge SDI、mini-mx SDI, but what returns mini/mini+/mini pro ?
@@ -367,9 +391,12 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			}
 
 			if (CMD == '68') {
-				// 0x68 Establish/disconnect communication
-				// eg. '<F00006866010000CF>';
-				if (DAT1 == '24' || DAT1 == '25') {
+				if (DAT1 == '01') {
+					this.emitConnectionStatusOK()
+					let key = `${DAT2}${DAT3}${DAT4}`
+					this.deviceStatus.deviceModelKey = key
+					return this.logFeedback(redeableMsg, `Device code:${key} known as ${KNOWN_DEVICE_MODEL_VERSIONS[this.deviceStatus.deviceModelKey]}`)
+				} else if (DAT1 == '24' || DAT1 == '25') {
 					let scene = parseInt(DAT2, this.PARSE_INT_HEX_MODE)
 					if (this.isSceneNumberValid(scene)) {
 						this.emitConnectionStatusOK()
@@ -377,6 +404,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 						return this.logFeedback(redeableMsg, `Loaded scene: ${scene} `)
 					}
 				} else if (DAT1 == '66' || DAT1 == '67') {
+					// 0x68 Establish/disconnect communication
+					// eg. '<F00006866010000CF>';
 					if (DAT2 == '00') {
 						this.emitConnectionStatusOK()
 						return this.logFeedback(redeableMsg, 'Device disconnected')
@@ -562,3 +591,4 @@ module.exports.INPUT_SIGNAL_CHANNEL_HDMI = INPUT_SIGNAL_CHANNEL_HDMI
 module.exports.INPUT_SIGNAL_CHANNEL_SDI = INPUT_SIGNAL_CHANNEL_SDI
 module.exports.OUTPUT_PST_PREVIEW = OUTPUT_PST_PREVIEW
 module.exports.OUTPUT_PGM_PROGRAM = OUTPUT_PGM_PROGRAM
+module.exports.KNOWN_DEVICE_MODEL_VERSIONS = KNOWN_DEVICE_MODEL_VERSIONS

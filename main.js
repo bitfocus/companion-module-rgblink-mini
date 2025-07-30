@@ -16,6 +16,7 @@ const {
 	INPUT_SIGNAL_CHANNEL_SDI,
 	OUTPUT_PST_PREVIEW,
 	OUTPUT_PGM_PROGRAM,
+	KNOWN_DEVICE_MODEL_VERSIONS
 } = require('./api/rgblinkminiconnector')
 const { ApiConfig } = require('./api/rgblinkapiconnector')
 
@@ -175,6 +176,7 @@ class MiniModuleInstance extends InstanceBase {
 			this.updateActions()
 			this.updateFeedbacks()
 			this.updatePresets()
+			this.updateVariableDefinitions()
 		} catch (ex) {
 			this.updateStatus(InstanceStatus.UnknownError, ex)
 			console.log(ex)
@@ -196,6 +198,7 @@ class MiniModuleInstance extends InstanceBase {
 		this.apiConnector.enableLog(this)
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_DEVICE_STATE_CHANGED, (changedEvents) => {
 			self.checkAllFeedbacks(changedEvents)
+			self.updateVariableValues()
 		})
 		this.apiConnector.on(this.apiConnector.EVENT_NAME_ON_CONNECTION_OK, (message) => {
 			self.updateStatus(InstanceStatus.Ok, message)
@@ -2232,6 +2235,21 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		this.setPresetDefinitions(presets)
+	}
+
+	updateVariableDefinitions() {
+		this.setVariableDefinitions([
+			{ variableId: 'device.key', name: 'Device model/version key' },
+			{ variableId: 'device.name', name: 'Known name of device' },
+		])
+		this.updateVariableValues()
+	}
+
+	updateVariableValues() {
+		let values = []
+		values['device.key'] = this.apiConnector.deviceStatus.deviceModelKey
+		values['device.name'] = KNOWN_DEVICE_MODEL_VERSIONS[this.apiConnector.deviceStatus.deviceModelKey]
+		this.setVariableValues(values)
 	}
 }
 runEntrypoint(MiniModuleInstance, UpgradeScripts)
