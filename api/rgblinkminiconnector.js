@@ -154,6 +154,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 
 			commands.push(new PollingCommand('81', '17', '00', '00', '00')) // LINE IN volume
 			commands.push(new PollingCommand('81', '17', '01', '00', '00')) // MIC IN volume
+
+			commands.push(new PollingCommand('68', '25', '00', '00', '00')) // Loaded scene
 		}
 
 		return commands
