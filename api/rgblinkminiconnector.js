@@ -506,14 +506,6 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 						return this.logFeedback(redeableMsg, 'Swtich mode T-BAR')
 					}
 				}
-			} else if (CMD == 'A2') {
-				if (DAT1 == '18') {
-					// T-BAR position status changed
-					let position = parseInt(DAT2, this.PARSE_INT_HEX_MODE) + parseInt(DAT3, this.PARSE_INT_HEX_MODE) * 256
-					this.emitConnectionStatusOK()
-					this.deviceStatus.tBarPosition = position
-					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
-				}
 			} else if (CMD == '81') {
 				if (DAT1 == '00' || DAT1 == '01') {
 					// 0x00 Set LINE IN status
@@ -566,6 +558,14 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 						this.deviceStatus.audioVolume[inputOrOutput] = volume
 						return this.logFeedback(redeableMsg, `Audio volume for ${inputOrOutput} is ${volume}`)
 					}
+				}
+			} else if (CMD == 'A2') {
+				if (DAT1 == '18') {
+					// T-BAR position status changed
+					let position = parseInt(DAT2, this.PARSE_INT_HEX_MODE) + parseInt(DAT3, this.PARSE_INT_HEX_MODE) * 256
+					this.emitConnectionStatusOK()
+					this.deviceStatus.tBarPosition = position
+					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
 				}
 			}
 
