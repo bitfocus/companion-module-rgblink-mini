@@ -44,7 +44,7 @@ class SentCommandStorage {
 
 	registerReceivedCommand(cmd) {
 		//console.log('IN  ' + cmd)
-		this.internalCompareResponseWithSentCommands(cmd)
+		return this.internalCompareResponseWithSentCommands(cmd)
 	}
 
 	getCountElementsWithoutRespond() {
@@ -77,6 +77,7 @@ class SentCommandStorage {
 	internalCompareResponseWithSentCommands(receivedCmd) {
 		let receivedCmdId = this.internalGetCmdId(receivedCmd)
 		let found = false
+		let matchedSent = undefined
 		for (let i = 0; i < this.commandsSentWithoutResponse.length; i++) {
 			let sent = this.commandsSentWithoutResponse[i]
 			let sentCmdId = this.internalGetCmdId(sent.command)
@@ -84,12 +85,14 @@ class SentCommandStorage {
 				//console.log('Found sent command for response ' + receivedCmd)
 				found = true
 				this.commandsSentWithoutResponse.splice(i, 1)
+				matchedSent = sent
 				break
 			}
 		}
 		if (!found) {
 			console.log('No sent command matching received response: ' + receivedCmd)
 		}
+		return matchedSent
 	}
 
 	internalGetCmdId(cmd) {
@@ -101,7 +104,7 @@ class ApiConfig {
 	host = undefined
 	port = undefined
 	polling = undefined
-	pollingEdge = undefined 
+	pollingEdge = undefined
 	logEveryCommand = undefined
 
 	constructor(host, port, polling, pollingEdge, logEveryCommand) {
@@ -393,7 +396,16 @@ class RGBLinkApiConnector {
 
 	validateReceivedDataAndEmitIfValid(message) {
 		let redeableMsg = message.toString('utf8').toUpperCase()
-		this.sentCommandStorage.registerReceivedCommand(redeableMsg)
+		let matchedSent = this.sentCommandStorage.registerReceivedCommand(redeableMsg)
+		if (matchedSent) {
+			matchedSent.ADDR = matchedSent.command.substr(2, 2)
+			matchedSent.SN = matchedSent.command.substr(4, 2)
+			matchedSent.CMD = matchedSent.command.substr(6, 2)
+			matchedSent.DAT1 = matchedSent.command.substr(8, 2)
+			matchedSent.DAT2 = matchedSent.command.substr(10, 2)
+			matchedSent.DAT3 = matchedSent.command.substr(12, 2)
+			matchedSent.DAT4 = matchedSent.command.substr(14, 2)
+		}
 
 		// Checksum checking
 		let checksumInMessage = redeableMsg.substr(16, 2)
@@ -422,7 +434,7 @@ class RGBLinkApiConnector {
 		}
 		// end of validate section
 
-		this.emit(this.EVENT_NAME_ON_DATA_API, [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4])
+		this.emit(this.EVENT_NAME_ON_DATA_API, [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4, matchedSent])
 	}
 
 	calculateChecksum(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {

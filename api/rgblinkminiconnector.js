@@ -101,8 +101,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			}
 		})
 
-		this.on(this.EVENT_NAME_ON_DATA_API, (ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) => {
-			let changedEvents = self.consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
+		this.on(this.EVENT_NAME_ON_DATA_API, (ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4, matchedSent) => {
+			let changedEvents = self.consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4, matchedSent)
 			this.emit(this.EVENT_NAME_ON_DEVICE_STATE_CHANGED, changedEvents)
 		})
 	}
@@ -382,7 +382,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		return scene >= 0 && scene <= 16
 	}
 
-	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
+	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4, matchedSent) {
 		let redeableMsg = [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4].join(' ')
 		try {
 			let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4
@@ -434,18 +434,22 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 				if (DAT1 == '02' || DAT1 == '03') {
 					// Signal source switching Settings
 					// 0x02(Write), 0x03(Read)
-					let src = parseInt(DAT3) + 1
-					if (this.isSourceNumberValid(src)) {
-						this.emitConnectionStatusOK()
-						this.deviceStatus.liveSource = src
-						// lets try
-						let output = parseInt(DAT4)
-						if (output == OUTPUT_PST_PREVIEW || output == OUTPUT_PGM_PROGRAM) {
+					// feedback contains bad data (example: <F00407502000400bb> )
+					// so I read data from sent command
+					this.emitConnectionStatusOK()
+					if (DAT1 == '02') {
+						if (matchedSent) {
+							// this.myDebug(`mathced feedback ${JSON.stringify(matchedSent)}`)
+							let src = parseInt(matchedSent.DAT3) + 1
+							let output = parseInt(matchedSent.DAT4)
 							this.deviceStatus.lastSourceOnOutput[output] = src
+							let outputName = (output == OUTPUT_PST_PREVIEW ? 'PST' : (output == OUTPUT_PGM_PROGRAM ? 'PGM' : `unrecognized:${output}`))
+							return this.logFeedback(redeableMsg, 'Choosed signal ' + src + ' for ' + outputName)
+						} else {
+							return this.logFeedback(redeableMsg, 'No matching sent message')
 						}
-						// lets try - end
-						let outputName = (output == OUTPUT_PST_PREVIEW ? 'PST' : (output == OUTPUT_PGM_PROGRAM ? 'PGM' : `unrecognized:${output}`))
-						return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource + ' for ' + outputName)
+					} else {
+						return this.logFeedback(redeableMsg, 'To check if this message makes sense')
 					}
 				} else if (DAT1 == '1A' || DAT1 == '1B') {
 					// T0000751B00000090 PIP layer (A or B)
