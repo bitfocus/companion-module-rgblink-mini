@@ -434,8 +434,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 				if (DAT1 == '02' || DAT1 == '03') {
 					// Signal source switching Settings
 					// 0x02(Write), 0x03(Read)
-					// feedback contains bad data (example: <F00407502000400bb> )
-					// so I read data from sent command
+					// feedback for PGM contains bad data (example: <F00407502000400bb> )
+					// so for PGM I read data from sent command
 					this.emitConnectionStatusOK()
 					if (DAT1 == '02') {
 						if (matchedSent) {
@@ -444,7 +444,7 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 							let output = parseInt(matchedSent.DAT4)
 							this.deviceStatus.lastSourceOnOutput[output] = src
 							let outputName = (output == OUTPUT_PST_PREVIEW ? 'PST' : (output == OUTPUT_PGM_PROGRAM ? 'PGM' : `unrecognized:${output}`))
-							return this.logFeedback(redeableMsg, 'Choosed signal ' + src + ' for ' + outputName)
+							return this.logFeedback(redeableMsg, 'Choosed signal ' + src + ' for ' + outputName + ' (matched sent ' + matchedSent.command + ' )')
 						} else {
 							return this.logFeedback(redeableMsg, 'No matching sent message')
 						}
