@@ -3,8 +3,14 @@ const { RGBLinkApiConnector, PollingCommand, ApiConfig } = require('./rgblinkapi
 const SWITCH_MODE_AUTO = 0
 const SWITCH_MODE_TBAR = 1
 
+const INPUT_SIGNAL_CHANNEL_HDMI = 0
+const INPUT_SIGNAL_CHANNEL_SDI = 1
+
 const PIP_LAYER_A = 0
 const PIP_LAYER_B = 1
+
+const OUTPUT_PST_PREVIEW = 0
+const OUTPUT_PGM_PROGRAM = 1
 
 const PIP_MODE_OFF = 0
 const PIP_MODES = {
@@ -38,6 +44,28 @@ const SWITCH_EFFECT = {
 	0xe: '<-O->',
 }
 
+const KNOWN_DEVICE_MODEL_VERSIONS = {
+	'220000': 'X2',
+	'320000': 'X3',
+	'700000': 'X7',
+	'A00000': 'X8',
+	'800000': 'X14',
+	'230100': 'FLEX 4ML',
+	'240100': 'FLEX 8',
+	'240000': 'FLEX 16',
+	'241000': 'FLEX 32',
+	'250000': 'FLEXpro 8',
+	'629000': 'D4',
+	'2C0100': 'GX4',
+	'2C0106': 'GX4pro',
+	'2C0107': 'X1Gpro',
+	'271000': 'Q16pro Gen2 4U',
+	'271001': 'Q16pro Gen2 4U (With h264 preview function)',
+	'271100': 'Q16pro Gen2 2U',
+	'271101': 'Q16pro Gen2 2U (With h264 preview function)',
+	'353200': 'MSP 405',
+}
+
 class RGBLinkMiniConnector extends RGBLinkApiConnector {
 	EVENT_NAME_ON_DEVICE_STATE_CHANGED = 'on_device_state_changed'
 
@@ -48,6 +76,18 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		switchEffect: undefined,
 		pipMode: undefined,
 		pipLayer: undefined,
+		channelsForInput: [],
+		lastSourceOnOutput: [], // czy to duplikat dla prevSource i liveSource?
+		tBarPosition: undefined,
+		audioFollowVideo: [],
+		lineInStatus: undefined,
+		mixingAudio: [],
+		audioVolume: [],
+		lineInVolume: undefined,
+		micInVolume: undefined,
+		lastTransitionType: undefined,
+		lastLoadedScene: undefined,
+		deviceModelKey: undefined,
 	}
 
 	constructor(/*ApiConfig*/ config = new ApiConfig()) {
@@ -61,8 +101,8 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 			}
 		})
 
-		this.on(this.EVENT_NAME_ON_DATA_API, (ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) => {
-			let changedEvents = self.consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4)
+		this.on(this.EVENT_NAME_ON_DATA_API, (ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4, matchedSent) => {
+			let changedEvents = self.consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4, matchedSent)
 			this.emit(this.EVENT_NAME_ON_DEVICE_STATE_CHANGED, changedEvents)
 		})
 	}
@@ -83,6 +123,41 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		commands.push(new PollingCommand('78', '07', '00', '00', '00')) // asking about switch effect
 		commands.push(new PollingCommand('75', '1B', '00', '00', '00')) // asking about PIP layer (A or B)
 		commands.push(new PollingCommand('F1', '40', '01', '00', '00')) // asking about special status 22
+		commands.push(new PollingCommand('68', '01', '00', '00', '00')) // read device model
+
+		if (this.config.pollingEdge) {
+			// mini-iso、mini-edge SDI、mini-mx SDI, but what returns mini/mini+/mini pro ?
+			commands.push(new PollingCommand('73', '19', '00', '00', '00')) // channel type for input 1 (HDMI/SDI)
+			commands.push(new PollingCommand('73', '19', '01', '00', '00')) // channel type for input 2 (HDMI/SDI)
+			commands.push(new PollingCommand('73', '19', '02', '00', '00')) // channel type for input 3 (HDMI/SDI)
+			commands.push(new PollingCommand('73', '19', '03', '00', '00')) // channel type for input 4 (HDMI/SDI)
+			commands.push(new PollingCommand('A2', '18', '00', '00', '00')) // channel type for input(HDMI/SDI)
+
+			commands.push(new PollingCommand('75', '03', '00', '00', '00')) // POC read Signal source switch set
+			commands.push(new PollingCommand('75', '03', '00', '00', '01')) // POC read Signal source switch set
+
+			// commands.push(new PollingCommand('81', '01', '00', '00', '00')) // LINE IN STATUS, but for MSP series 405
+			commands.push(new PollingCommand('81', '09', '00', '00', '00')) // Read Audio Follow Video - HDMI 1
+			commands.push(new PollingCommand('81', '09', '01', '00', '00')) // Read Audio Follow Video - HDMI 2
+			commands.push(new PollingCommand('81', '09', '02', '00', '00')) // Read Audio Follow Video - HDMI 3
+			commands.push(new PollingCommand('81', '09', '03', '00', '00')) // Read Audio Follow Video - HDMI 4
+			commands.push(new PollingCommand('81', '09', '04', '00', '00')) // Read Audio Follow Video - is it works?
+
+			commands.push(new PollingCommand('81', '0D', '00', '00', '00')) // Read Mixing Audio for PST
+			commands.push(new PollingCommand('81', '0D', '01', '00', '00')) // Read Mixing Audio for PGM
+
+			commands.push(new PollingCommand('81', '0F', '00', '00', '00')) // Read Audio Volume - HDMI 1
+			commands.push(new PollingCommand('81', '0F', '01', '00', '00')) // Read Audio Volume - HDMI 2
+			commands.push(new PollingCommand('81', '0F', '02', '00', '00')) // Read Audio Volume - HDMI 3
+			commands.push(new PollingCommand('81', '0F', '03', '00', '00')) // Read Audio Volume - HDMI 4
+			commands.push(new PollingCommand('81', '0F', '05', '00', '00')) // Read Audio Volume - Output
+
+			commands.push(new PollingCommand('81', '17', '00', '00', '00')) // LINE IN volume
+			commands.push(new PollingCommand('81', '17', '01', '00', '00')) // MIC IN volume
+
+			commands.push(new PollingCommand('68', '25', '00', '00', '00')) // Loaded scene
+		}
+
 		return commands
 	}
 
@@ -96,9 +171,18 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 	}
 
 	sendSwitchToSourceMessage(source) {
-		if (source >= 1 && source <= 4) {
+		this.sendSwitchToSourceToOutputMessage(source, OUTPUT_PST_PREVIEW)
+	}
+
+	sendSwitchToSourceToOutputMessage(source, output) {
+		if (this.isSourceNumberValid(source)) {
 			let sourceHex = this.byteToTwoSignHex(source - 1)
-			this.sendCommand('75', '02', '00', sourceHex, '00')
+			if (this.isOutputValid(output)) {
+				let outputHex = this.byteToTwoSignHex(output)
+				this.sendCommand('75', '02', '00', sourceHex, outputHex)
+			} else {
+				this.myWarn('Bad output:' + output)
+			}
 		} else {
 			this.myWarn('Bad source:' + source)
 		}
@@ -143,6 +227,109 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 	}
 
+	sendSwitchInputSignalChannel(source, type) {
+		if (this.isSourceNumberValid(source)) {
+			let sourceHex = this.byteToTwoSignHex(source - 1)
+			if (this.isChannelTypeValid(type)) {
+				let typeHex = this.byteToTwoSignHex(type)
+				this.sendCommand('73', '18', sourceHex, typeHex, '00')
+			} else {
+				this.myWarn('Bad type:' + type)
+			}
+		} else {
+			this.myWarn('Bad source:' + source)
+		}
+	}
+
+	sendSetTBarPosition(value) {
+		value = value & 0xFFFF;
+		let lowHex = this.byteToTwoSignHex(value % 256)
+		let hiHex = this.byteToTwoSignHex(Math.floor(value / 256))
+		this.sendCommand('78', '08', lowHex, hiHex, '00') // set T-BAR position
+	}
+
+	sendSetAudioFollowVideo(source, onOff) {
+		if (this.isSourceNumberValid(source)) {
+			let sourceHex = this.byteToTwoSignHex(source - 1)
+			if (this.isOnOffValid(onOff)) {
+				let onOffHex = this.byteToTwoSignHex(onOff)
+				this.sendCommand('81', '08', sourceHex, onOffHex, '00')
+			} else {
+				this.myWarn('Bad onOff:' + onOff)
+			}
+		} else {
+			this.myWarn('Bad source:' + source)
+		}
+	}
+
+	sendSetLineInStatus(onOff) {
+		if (this.isOnOffValid(onOff)) {
+			let onOffHex = this.byteToTwoSignHex(onOff)
+			this.sendCommand('81', '00', '00', onOffHex, '00')
+		} else {
+			this.myWarn('Bad onOff:' + onOff)
+		}
+	}
+
+	sendSetAudioMixing(outputPstOrPgm, bit0, bit1, bit2, bit3, bit4) {
+		if (this.isOutputValid(outputPstOrPgm) && this.isOnOffValid(bit0) && this.isOnOffValid(bit1) && this.isOnOffValid(bit2) && this.isOnOffValid(bit3) && this.isOnOffValid(bit4)) {
+			let value =
+				(bit4 << 4) |
+				(bit3 << 3) |
+				(bit2 << 2) |
+				(bit1 << 1) |
+				(bit0 << 0)
+			let dat3 = this.byteToTwoSignHex(value)
+			this.sendCommand('81', '0C', this.byteToTwoSignHex(outputPstOrPgm), dat3, '00')
+		} else {
+			this.myWarn(`Bad param(s) output;${outputPstOrPgm} bits: ${bit0},${bit1},${bit2},${bit3},${bit4}`)
+		}
+	}
+
+	sendSetAudioVolume(inputOrOutput, volume) {
+		if (this.isInputOrOutputAudioValid(inputOrOutput)) {
+			if (this.isVolumeLevelValid(volume)) {
+				this.sendCommand('81', '0E', this.byteToTwoSignHex(inputOrOutput), this.byteToTwoSignHex(volume), '00')
+			} else {
+				this.myWarn(`Bad volume level: ${volume}`)
+			}
+		} else {
+			this.myWarn(`Bad input or output number: ${inputOrOutput}`)
+		}
+	}
+
+	sendSetLineInVolume(volume) {
+		if (this.isLineInVolumeLevelValid(volume)) {
+			this.sendCommand('81', '16', '00', this.byteToTwoSignHex(volume), '00')
+		} else {
+			this.myWarn(`Bad LINE IN volume level ${volume}`)
+		}
+	}
+
+	sendSetMicInVolume(volume) {
+		if (this.isMicInVolumeLevelValid(volume)) {
+			this.sendCommand('81', '16', '01', this.byteToTwoSignHex(volume), '00')
+		} else {
+			this.myWarn(`Bad MIC IN volume level ${volume}`)
+		}
+	}
+
+	sendPerformTransition(transitionType) {
+		if (this.isTransitionTypeValid(transitionType)) {
+			this.sendCommand('78', '00', '00', this.byteToTwoSignHex(transitionType), '00')
+		} else {
+			this.myWarn(`Bad transition type: ${transitionType}`)
+		}
+	}
+
+	sendLoadScene(scene) {
+		if (this.isSceneNumberValid(scene)) {
+			this.sendCommand('68', '24', this.byteToTwoSignHex(scene), '00', '00')
+		} else {
+			this.myWarn(`Bad scene number: ${scene}`)
+		}
+	}
+
 	consume22(message) {
 		let prev = message[0]
 		if (prev <= 3) {
@@ -155,7 +342,47 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 		}
 	}
 
-	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4) {
+	isSourceNumberValid(src) {
+		return (src >= 1 && src <= 5)
+	}
+
+	isChannelTypeValid(type) {
+		return (type == INPUT_SIGNAL_CHANNEL_HDMI || type == INPUT_SIGNAL_CHANNEL_SDI)
+	}
+
+	isOutputValid(output) {
+		return (output == OUTPUT_PST_PREVIEW || output == OUTPUT_PGM_PROGRAM)
+	}
+
+	isOnOffValid(onOff) {
+		return (onOff == 0 || onOff == 1)
+	}
+
+	isInputOrOutputAudioValid(inputOrOutput) {
+		return (inputOrOutput == 5 || (inputOrOutput >= 0 && inputOrOutput <= 3))
+	}
+
+	isVolumeLevelValid(volume) {
+		return volume >= 0 && volume <= 100
+	}
+
+	isLineInVolumeLevelValid(volume) {
+		return volume >= 0 && volume <= 0x1F
+	}
+
+	isMicInVolumeLevelValid(volume) {
+		return volume >= 0 && volume <= 8
+	}
+
+	isTransitionTypeValid(onOff) {
+		return (onOff == 0 || onOff == 1)
+	}
+
+	isSceneNumberValid(scene) {
+		return scene >= 0 && scene <= 16
+	}
+
+	consumeFeedback(ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4, matchedSent) {
 		let redeableMsg = [ADDR, SN, CMD, DAT1, DAT2, DAT3, DAT4].join(' ')
 		try {
 			let importantPart = CMD + DAT1 + DAT2 + DAT3 + DAT4
@@ -163,32 +390,66 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 				// readed status, it's ok
 				this.emitConnectionStatusOK()
 				return this.logFeedback(redeableMsg, 'Status readed')
-			} else if (CMD == 'A2' && DAT1 == '18') {
-				// t-bar position update
-				this.emitConnectionStatusOK()
-				return this.logFeedback(redeableMsg, 'T-BAR position changed')
 			}
 
 			if (CMD == '68') {
-				// 0x68 Establish/disconnect communication
-				// eg. '<F00006866010000CF>';
-				if (DAT2 == '00') {
+				if (DAT1 == '01') {
 					this.emitConnectionStatusOK()
-					return this.logFeedback(redeableMsg, 'Device disconnected')
-				} else if (DAT2 == '01') {
-					this.emitConnectionStatusOK()
-					return this.logFeedback(redeableMsg, 'Device connected')
+					let key = `${DAT2}${DAT3}${DAT4}`
+					this.deviceStatus.deviceModelKey = key
+					return this.logFeedback(redeableMsg, `Device code:${key} known as ${KNOWN_DEVICE_MODEL_VERSIONS[this.deviceStatus.deviceModelKey]}`)
+				} else if (DAT1 == '24' || DAT1 == '25') {
+					let scene = parseInt(DAT2, this.PARSE_INT_HEX_MODE)
+					if (this.isSceneNumberValid(scene)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.lastLoadedScene = scene
+						return this.logFeedback(redeableMsg, `Loaded scene: ${scene} `)
+					}
+				} else if (DAT1 == '66' || DAT1 == '67') {
+					// 0x68 Establish/disconnect communication
+					// eg. '<F00006866010000CF>';
+					if (DAT2 == '00') {
+						this.emitConnectionStatusOK()
+						return this.logFeedback(redeableMsg, 'Device disconnected')
+					} else if (DAT2 == '01') {
+						this.emitConnectionStatusOK()
+						return this.logFeedback(redeableMsg, 'Device connected')
+					}
+				}
+			} else if (CMD == '73') {
+				// 0x73 Switch input signal channel: HDMI/SDI
+				if (DAT1 == '18' || DAT1 == '19') {
+					// 0x18 Set input signal channel
+					// 0x19 Read input signal channel
+					let src = parseInt(DAT2) + 1
+					let type = parseInt(DAT3)
+					if (this.isSourceNumberValid(src) && this.isChannelTypeValid(type)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.channelsForInput[src] = type
+						return this.logFeedback(redeableMsg, 'Input ' + src + ' use channel ' + type + ' (' + (type == 1 ? 'HDMI' : 'SDI') + ')')
+					}
 				}
 			} else if (CMD == '75') {
 				// 0x75 Read/write video processor information
 				if (DAT1 == '02' || DAT1 == '03') {
 					// Signal source switching Settings
 					// 0x02(Write), 0x03(Read)
-					let src = parseInt(DAT3) + 1
-					if (src >= 1 && src <= 4) {
-						this.emitConnectionStatusOK()
-						this.deviceStatus.liveSource = src
-						return this.logFeedback(redeableMsg, 'Choosed signal ' + this.deviceStatus.liveSource)
+					// feedback for PGM contains bad data (example: <F00407502000400bb> )
+					// so for PGM I read data from sent command
+					this.emitConnectionStatusOK()
+					if (DAT1 == '02') {
+						if (matchedSent) {
+							// this.myDebug(`mathced feedback ${JSON.stringify(matchedSent)}`)
+							let src = parseInt(matchedSent.DAT3) + 1
+							let output = parseInt(matchedSent.DAT4)
+							this.deviceStatus.lastSourceOnOutput[output] = src
+							let outputName = (output == OUTPUT_PST_PREVIEW ? 'PST' : (output == OUTPUT_PGM_PROGRAM ? 'PGM' : `unrecognized:${output}`))
+							return this.logFeedback(redeableMsg, 'Choosed signal ' + src + ' for ' + outputName + ' (matched sent ' + matchedSent.command + ' )')
+						} else {
+							return this.logFeedback(redeableMsg, 'No matching sent message')
+						}
+					} else {
+						return this.logFeedback(redeableMsg, 'To check if this message makes sense')
 					}
 				} else if (DAT1 == '1A' || DAT1 == '1B') {
 					// T0000751B00000090 PIP layer (A or B)
@@ -213,7 +474,31 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 				}
 			} else if (CMD == '78') {
 				// 0x78 Switching Setting
-				if (DAT1 == '12' || DAT1 == '13') {
+				if (DAT1 == '00' || DAT1 == '01') {
+					// 0x78 Set the special effect switching operation
+					// 0x00 Set the switch mode
+					// TAKE/CUT
+					let transitionType = parseInt(DAT3)
+					if (this.isTransitionTypeValid(transitionType)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.lastTransitionType = transitionType
+						return this.logFeedback(redeableMsg, 'Transition type: ' + transitionType)
+					}
+				} else if (DAT1 == '06' || DAT1 == '07') {
+					// Switching effect setting
+					let effect = parseInt(DAT2, this.PARSE_INT_HEX_MODE)
+					if (effect >= 0 && effect <= 0x0e) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.switchEffect = effect
+						return this.logFeedback(redeableMsg, 'Switch effect: ' + SWITCH_EFFECT[effect])
+					}
+				} else if (DAT1 == '08' || DAT1 == '09') {
+					// Set T-BAR position
+					let position = parseInt(DAT2, this.PARSE_INT_HEX_MODE) + parseInt(DAT3, this.PARSE_INT_HEX_MODE) * 256
+					this.emitConnectionStatusOK()
+					this.deviceStatus.tBarPosition = position
+					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
+				} else if (DAT1 == '12' || DAT1 == '13') {
 					// T-BAR/Auto
 					if (DAT2 == '00') {
 						this.emitConnectionStatusOK()
@@ -224,16 +509,70 @@ class RGBLinkMiniConnector extends RGBLinkApiConnector {
 						this.deviceStatus.switchMode = parseInt(DAT2)
 						return this.logFeedback(redeableMsg, 'Swtich mode T-BAR')
 					}
-				} else if (DAT1 == '06' || DAT1 == '07') {
-					// Switching effect setting
-					let effect = parseInt(DAT2, this.PARSE_INT_HEX_MODE)
-					if (effect >= 0 && effect <= 0x0e) {
+				}
+			} else if (CMD == '81') {
+				if (DAT1 == '00' || DAT1 == '01') {
+					// 0x00 Set LINE IN status
+					// 0x01 Read LINE IN status
+					let onOff = parseInt(DAT3)
+					if (this.isOnOffValid(onOff)) {
 						this.emitConnectionStatusOK()
-						this.deviceStatus.switchEffect = effect
-						return this.logFeedback(redeableMsg, 'Switch effect: ' + SWITCH_EFFECT[effect])
+						this.deviceStatus.lineInStatus = onOff
+						return this.logFeedback(redeableMsg, 'LINE IN status:' + onOff)
+					}
+				} else if (DAT1 == '08' || DAT1 == '09') {
+					// 0x08/0x09 AFV (Audio Follow Video)
+					let src = parseInt(DAT2) + 1
+					let onOff = parseInt(DAT3)
+					if (this.isSourceNumberValid(src) && this.isOnOffValid(onOff)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.audioFollowVideo[src] = onOff
+						return this.logFeedback(redeableMsg, 'AFV status for input:' + src + ' is:' + onOff)
+					}
+				} else if (DAT1 == '16' || DAT1 == '17') {
+					// 0x16/0x17 Extended audio volume setting
+					let lineMicIn = parseInt(DAT2)
+					let volume = parseInt(DAT3)
+					if (lineMicIn == 0 && this.isLineInVolumeLevelValid(volume)) {
+						// line in
+						this.emitConnectionStatusOK()
+						this.deviceStatus.lineInVolume = volume
+						return this.logFeedback(redeableMsg, 'LINE IN volume level:' + volume)
+					} else if (lineMicIn == 1 && this.isMicInVolumeLevelValid(volume)) {
+						// mic in
+						this.emitConnectionStatusOK()
+						this.deviceStatus.micInVolume = volume
+						return this.logFeedback(redeableMsg, 'MIC IN volume level:' + volume)
+					}
+				} else if (DAT1 == '0C' || DAT1 == '0D') {
+					// 0x0C/0x0D Mixing Audio
+					let outputPstOrPgm = parseInt(DAT2)
+					let onOffValue = parseInt(DAT3, this.PARSE_INT_HEX_MODE)
+					if (this.isOutputValid(outputPstOrPgm)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.mixingAudio[outputPstOrPgm] = onOffValue
+						return this.logFeedback(redeableMsg, `Mixing audio value for ${outputPstOrPgm} is ${onOffValue}`)
+					}
+				} else if (DAT1 == '0E' || DAT1 == '0F') {
+					// 0x0E/0x0F HDMI and output audio volume setting
+					let inputOrOutput = parseInt(DAT2)
+					let volume = parseInt(DAT3, this.PARSE_INT_HEX_MODE)
+					if (this.isInputOrOutputAudioValid(inputOrOutput) && this.isVolumeLevelValid(volume)) {
+						this.emitConnectionStatusOK()
+						this.deviceStatus.audioVolume[inputOrOutput] = volume
+						return this.logFeedback(redeableMsg, `Audio volume for ${inputOrOutput} is ${volume}`)
 					}
 				}
+			} else if (CMD == 'A2') {
+				if (DAT1 == '18') {
+					// T-BAR position status changed
+					let position = parseInt(DAT2, this.PARSE_INT_HEX_MODE) + parseInt(DAT3, this.PARSE_INT_HEX_MODE) * 256
+					this.emitConnectionStatusOK()
+					this.deviceStatus.tBarPosition = position
+					return this.logFeedback(redeableMsg, 'T-BAR position: ' + position)
+				}
 			}
+
 		} catch (ex) {
 			console.log(ex)
 		}
@@ -254,3 +593,8 @@ module.exports.PIP_LAYER_B = PIP_LAYER_B
 module.exports.PIP_MODE_OFF = PIP_MODE_OFF
 module.exports.PIP_MODES = PIP_MODES
 module.exports.SWITCH_EFFECT = SWITCH_EFFECT
+module.exports.INPUT_SIGNAL_CHANNEL_HDMI = INPUT_SIGNAL_CHANNEL_HDMI
+module.exports.INPUT_SIGNAL_CHANNEL_SDI = INPUT_SIGNAL_CHANNEL_SDI
+module.exports.OUTPUT_PST_PREVIEW = OUTPUT_PST_PREVIEW
+module.exports.OUTPUT_PGM_PROGRAM = OUTPUT_PGM_PROGRAM
+module.exports.KNOWN_DEVICE_MODEL_VERSIONS = KNOWN_DEVICE_MODEL_VERSIONS
