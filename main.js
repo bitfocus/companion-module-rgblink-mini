@@ -218,7 +218,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		actions['switch_mode_and_source'] = {
 			name: 'Select source and target',
-			description: 'Combines Switch signal source and Switch mode (T-BAR/Auto). May behave differently than expected. 5th input is in BETA. Tested with: mini, mini-edge SDI.',
+			description: 'Combines Switch signal source and Switch mode (T-BAR/Auto). May behave differently than expected. 5th input is in BETA. Tested with: mini.',
 			options: [
 				{
 					type: 'dropdown',
@@ -247,7 +247,7 @@ class MiniModuleInstance extends InstanceBase {
 		}
 		actions['build_pip_sources_and_target'] = {
 			name: 'Build PIP from selected sources',
-			description: 'Set PIP mode, select two sources and output (Live or Preview). Combines Select PIP mode, Select PIP layer (A or B), and Switch signal source. Tested with: mini.',
+			description: 'Set PIP mode, select two sources and output (Live or Preview). Combines Select PIP mode, Select PIP layer (A or B), and Switch signal source. Tested with: mini. Not reccomended for mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -297,7 +297,7 @@ class MiniModuleInstance extends InstanceBase {
 		}
 		actions['switch_to_source'] = {
 			name: 'Switch signal source',
-			description: 'Similar to pressing the 1/2/3/4/5 source button on the device. 5th input is in BETA. Tested with: mini.',
+			description: 'Similar to pressing the 1/2/3/4/5 source button on the device. 5th input is in BETA. Tested with: mini, mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -333,7 +333,7 @@ class MiniModuleInstance extends InstanceBase {
 		}
 		actions['pip_mode'] = {
 			name: 'Select PIP mode',
-			description: 'Select picture-in-picture mode (off, center, top, bottom, left, right, etc.). Tested with: mini.',
+			description: 'Select picture-in-picture mode (off, center, top, bottom, left, right, etc.). Tested with: mini. Not reccomended for mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -371,7 +371,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		actions['pip_layer'] = {
 			name: 'Select PIP layer (A or B)',
-			description: 'Select the PIP layer before setting the signal source. Tested with: mini.',
+			description: 'Select the PIP layer before setting the signal source. Tested with: mini. Not reccomended for mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -390,8 +390,8 @@ class MiniModuleInstance extends InstanceBase {
 
 		// Load scene
 		actions['load_scene_view'] = {
-			name: 'EXPERIMENTAL: Load scene/view to Preview (PVM)',
-			description: 'Load saved earlier scene/view to Preview. Not yet tested. Should be compatible with mini-kind devices, which support scenes.',
+			name: 'BETA: Load scene/view to Preview (PVM)',
+			description: 'Load saved earlier scene/view to Preview. Should be compatible with mini-kind devices, which support scenes. Tested with: mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -479,8 +479,8 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		actions['switch_tbar_position'] = {
-			name: 'EXPERIMENTAL: Set T-BAR position',
-			description: 'Set the T-BAR position to MIN or MAX. Not yet tested. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO',
+			name: 'BETA: Set T-BAR position',
+			description: 'Set the T-BAR position to MIN or MAX. Based on API v1.0.6 20250611, is it possible on mini Series: mini-pro, mini-pro v3, mini-ISO. Tested with: mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -498,8 +498,8 @@ class MiniModuleInstance extends InstanceBase {
 		}
 
 		actions['perform_transition'] = {
-			name: 'EXPERIMENTAL: Performs a transition between Program and Preview',
-			description: 'Performs a transition between Program and Preview (TAKE/CUT). Not yet tested.',
+			name: 'BETA: Performs a transition between Program and Preview',
+			description: 'Performs a transition between Program and Preview (TAKE/CUT). Tested with: mini-edge SDI.',
 			options: [
 				{
 					type: 'dropdown',
@@ -931,7 +931,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		feedbacks['set_load_scene_view'] = {
 			type: 'boolean',
-			name: 'EXPERIMENTAL: Last loaded scene/view to Preview (PVM)',
+			name: 'BETA: Last loaded scene/view to Preview (PVM)',
 			description: 'Last loaded scene/view to Preview (PVM)',
 			defaultStyle: {
 				color: combineRgb(255, 255, 255),
@@ -988,7 +988,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		feedbacks['set_switch_tbar_position'] = {
 			type: 'boolean',
-			name: 'EXPERIMENTAL: T-BAR position',
+			name: 'BETA: T-BAR position',
 			description: 'Is T-BAR on selected position',
 			defaultStyle: {
 				color: combineRgb(255, 255, 255),
@@ -1013,7 +1013,7 @@ class MiniModuleInstance extends InstanceBase {
 
 		feedbacks['set_perform_transition'] = {
 			type: 'boolean',
-			name: 'EXPERIMENTAL: Last transition between Program and Preview',
+			name: 'BETA: Last transition between Program and Preview',
 			description: 'What was the last transition',
 			defaultStyle: {
 				color: combineRgb(255, 255, 255),
@@ -1819,10 +1819,10 @@ class MiniModuleInstance extends InstanceBase {
 		for (const item of TBAR_POSITION_CHOICES) {
 			presets.push({
 				type: 'button',
-				category: 'EXPERIMENTAL: T-BAR position',
-				name: 'EXPERIMENTAL: T-BAR position ' + item.label,
+				category: 'BETA: T-BAR position',
+				name: 'BETA: T-BAR position ' + item.label,
 				style: {
-					text: 'EXPERIMENTAL: T-BAR position ' + item.label,
+					text: 'BETA: T-BAR position ' + item.label,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -2159,10 +2159,10 @@ class MiniModuleInstance extends InstanceBase {
 		for (const item of SCENES_VIEWS_CHOICES_PART) {
 			presets.push({
 				type: 'button',
-				category: 'EXPERIMENTAL: Load scene',
-				name: 'EXPERIMENTAL: Load\n' + item.label,
+				category: 'BETA: Load scene',
+				name: 'BETA: Load\n' + item.label,
 				style: {
-					text: 'EXPERIMENTAL: Load\n' + item.label,
+					text: 'BETA: Load\n' + item.label,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
@@ -2198,10 +2198,10 @@ class MiniModuleInstance extends InstanceBase {
 		for (const item of TRANSITION_TYPE_CHOICES_PART) {
 			presets.push({
 				type: 'button',
-				category: 'EXPERIMENTAL: Performs transition',
-				name: 'EXPERIMENTAL: Performs transition\n' + item.label,
+				category: 'BETA: Performs transition',
+				name: 'BETA: Performs transition\n' + item.label,
 				style: {
-					text: 'EXPERIMENTAL: Performs transition\n' + item.label,
+					text: 'BETA: Performs transition\n' + item.label,
 					size: 'auto',
 					color: this.TEXT_COLOR,
 					bgcolor: this.BACKGROUND_COLOR_DEFAULT,
