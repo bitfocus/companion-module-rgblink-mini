@@ -3,7 +3,7 @@
 	"name": "rgblink-mini",
 	"shortname": "mini",
 	"description": "TODO",
-	"version": "2.1.0-RC7",
+	"version": "2.1.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-rgblink-mini.git",
 	"bugs": "https://github.com/bitfocus/companion-module-rgblink-mini/issues",
